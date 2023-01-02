@@ -1,12 +1,8 @@
 github_users:
-  - torvalds
-  - alshedivat
+  - seyoungnam
 
 github_repos:
-  - alshedivat/al-folio
-  - twbs/bootstrap
-  - jekyll/jekyll
-  - jquery/jquery
-  - FortAwesome/Font-Awesome
-  - jpswalsh/academicons
-  - mathjax/MathJax
+  - EPM-LearningAnalytics/epm
+  - seyoungnam/resume_website_with_wordpress
+  - seyoungnam/korean_literature_project
+  - seyoungnam/myBlog
