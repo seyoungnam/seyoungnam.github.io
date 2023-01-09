@@ -14,6 +14,11 @@ nav_order: 6
         <a class="post-title" href="../../_k8s/01-understanding-k8s">01 Understanding Kubernetes</a>
       </h3>
     </li>
+    <li>
+      <h3>
+        <a class="post-title" href="../../_k8s/02-service">02 Connecting Pods over the network with Services</a>
+      </h3>
+    </li>
   </ul>
 </div>
 
