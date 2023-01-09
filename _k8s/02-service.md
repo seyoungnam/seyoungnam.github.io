@@ -20,16 +20,16 @@ authors:
 #   - we may want to automate TOC generation in the future using
 #     jekyll-toc plugin (https://github.com/toshimaru/jekyll-toc).
 toc:
-  - name: 1. Two core concepts
+  - name: 1. How Kubernetes routes network traffic
     # if a section has subsections, you can add them as follows:
     # subsections:
     #   - name: Example Child Subsection 1
     #   - name: Example Child Subsection 2
-  - name: 2. Containers vs Pods vs Nodes
-  - name: 3. Running Pods with controllers
-  - name: 4. Defining Deployments in application manifests
-  - name: 5. Working with applications in Pods
-  - name: 6. Understanding Kubernetes resource management
+  - name: 2. Routing traffic between Pods
+  - name: 3. Routing external traffic to Pods
+  # - name: 4. Defining Deployments in application manifests
+  # - name: 5. Working with applications in Pods
+  # - name: 6. Understanding Kubernetes resource management
 
 # Below is an example of injecting additional post-specific styles.
 # If you use this post as a template, delete this _styles block.
