@@ -27,10 +27,11 @@ toc:
     #   - name: Example Child Subsection 2
   - name: 2. How Services route traffic
   - name: 3. The simplest Service YAML spec
-    - name: 3-1. Routing traffic between Pods
-    - name: 3-2. Routing external traffic to Pods
-    - name: 3-3. Routing traffic outside Kubernetes
-  - name: 4. Understanding Kubernetes Service resolution
+  - name: 4. Three scenarios of routing traffic
+    # - name: 3-1. Routing traffic between Pods
+    # - name: 3-2. Routing external traffic to Pods
+    # - name: 3-3. Routing traffic outside Kubernetes
+  - name: 5. Understanding Kubernetes Service resolution
   # - name: 5. Working with applications in Pods
   # - name: 6. Understanding Kubernetes resource management
 
@@ -77,14 +78,14 @@ spec:
 {% endhighlight %}
 
 
-## 3. Three scenarios of routing traffic
+## 4. Three scenarios of routing traffic
 There are roughly three types of services, depending on scenarios :
  * routing traffic between pods in the same cluster
  * routing external traffic to internal pods
  * routing traffic outside a Kubernetes cluster.
 
 
-### 3-1. Routing traffic between Pods
+### 4-1. Routing traffic between Pods
 This is the default type of Service and it is called **ClusterIP**. The assigned IP address works only within the cluster, so ClusterIP Services are useful only for communicating between Pods. Below is the basic YAML spec for ClusterIP Service.
 
 {% highlight yaml %}
@@ -111,7 +112,7 @@ numbers-api   ClusterIP   10.104.95.136   <none>        80/TCP    8s
 {% endhighlight %}
 
 
-### 3-2. Routing external traffic to Pods
+### 4-2. Routing external traffic to Pods
 A **LoadBalancer** Service integrates with an exteranl load balancer, which sends traffic to the cluster. The Service sends the traffic to a Pod, using the same label-selector mechanism to identify a target Pod. You might have many Pods that match the label selector for the Service, so the cluster needs to choose a node to send the traffic to and then choose a Pod on that node. But this issue is taken care of by Kubernetes. All you need to do is deploy a LoadBalancer Service. Below is the basic LoadBalancer Service YAML spec.
 
 {% highlight yaml %}
@@ -139,7 +140,7 @@ numbers-web   LoadBalancer   10.107.214.57   localhost     8080:32007/TCP   10s
 {% endhighlight %}
 
 
-### 3-3. Routing traffic outside Kubernetes
+### 4-3. Routing traffic outside Kubernetes
 When you want to integerate some resources(e.g. database) running outside your cluster with any nodes running within the cluster, you need to use an **ExternalName Service**. ExternalName Services create a domain name alias and register it in the DNS server. When the Pod makes a lookup request using the local name, the DNS server resolves it to a fully qualified external name. Below is an example of the Service YAML spec.
 
 {% highlight yaml %}
@@ -213,7 +214,7 @@ Address: 10.108.78.48
 If you look the DNS lookup output above, you will find the two interesting facts. First, the resolved IP address(`10.108.78.48`) is not the endpoint but the ClusterIP address. Second, the domain name ends with `.default.svc.cluster.local`. We will get answers below.
 
 
-## 4. Understanding Kubernetes Service resolution
+## 5. Understanding Kubernetes Service resolution
 To answer the first question, we need to keep in mind that Services have the up-to-date endpoint list. Therefore, clients need to visit the Service first to get the latest endpoint, and this is why the `numbers-api` resolves to its Service IP address.
 
 Pods access the network through the a network proxy called `kube-proxy`, another internal Kubernetes component, and that uses packet filtering to send the Service's ClusterIP to the real endpoint. The reason `kube-proxy` has the up-to-date endpoint list is that Services have a controller that keeps the endpoint list updated whenever there are changes to Pods. Thus, `kube-proxy` is able to refresh the endpoint list whenever clients visits the static ClusterIP address.
