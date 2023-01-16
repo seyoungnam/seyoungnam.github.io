@@ -27,9 +27,9 @@ toc:
     #   - name: Example Child Subsection 2
   - name: 2. How Services route traffic
   - name: 3. The simplest Service YAML spec
-        - name: 3-1. Routing traffic between Pods
-        - name: 3-2. Routing external traffic to Pods
-        - name: 3-3. Routing traffic outside Kubernetes
+    - name: 3-1. Routing traffic between Pods
+    - name: 3-2. Routing external traffic to Pods
+    - name: 3-3. Routing traffic outside Kubernetes
   - name: 4. Understanding Kubernetes Service resolution
   # - name: 5. Working with applications in Pods
   # - name: 6. Understanding Kubernetes resource management
