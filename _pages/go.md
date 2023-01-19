@@ -14,11 +14,11 @@ nav_order: 6
         <a class="post-title" href="/go/01-context">01 Context</a>
       </h3>
     </li>
-    <!-- <li>
+    <li>
       <h3>
-        <a class="post-title" href="../../_go/02-service">02 Connecting Pods over the network with Services</a>
+        <a class="post-title" href="../../go/02-concurrency">02 Concurrency - Goroutine & Channel</a>
       </h3>
-    </li> -->
+    </li>
   </ul>
 </div>
 

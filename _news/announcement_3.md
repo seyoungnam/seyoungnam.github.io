@@ -1,7 +1,7 @@
 ---
 layout: post
-date: 2023-01-02 19:42:00-0800
+date: 2023-01-19 08:56:00
 inline: true
 ---
 
-<a href="https://seyoungnam.github.io/blog/2023/move-in/">New blog post - 새로운 보금자리로 이동</a>
+<a href="https://seyoungnam.github.io/go/01-concurrency/">New post in Golang - 02 Concurrency</a>
