@@ -1,7 +1,7 @@
 ---
 layout: post
-date: 2023-01-09 00:08:45-0800
+date: 2023-02-06 00:01:24
 inline: true
 ---
 
-<a href="https://seyoungnam.github.io/_k8s/02-service/">New post - 02 Connecting Pods over the network with Services</a>
+<a href="https://seyoungnam.github.io/2023/layoffs/">New post - 갑작스런 layoff 발표</a>
