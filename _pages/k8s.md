@@ -19,6 +19,11 @@ nav_order: 6
         <a class="post-title" href="../../_k8s/02-service">02 Connecting Pods over the network with Services</a>
       </h3>
     </li>
+    <li>
+      <h3>
+        <a class="post-title" href="../../_k8s/03-config">03 ConfigMaps and Secrets</a>
+      </h3>
+    </li>
   </ul>
 </div>
 

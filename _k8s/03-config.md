@@ -1,9 +1,9 @@
 ---
 layout: distill
-title: 03 Configuring applications with ConfigMaps and Secrets
+title: 03 ConfigMaps and Secrets
 description: Most content in this document comes from "Learn Kubernetes in a Month of Lunches".
 giscus_comments: true
-date: 2022-01-15
+date: 2022-05-15
 
 authors:
   - name: Elton Stoneman
@@ -55,191 +55,359 @@ _styles: >
 
 ---
 
-## 1. The most rudimental way to supply configuration to apps
-Define env variables in a Pod spec
+## 1. Environment variables, ConfigMaps, and Secrets
 
-## 1. A better approach with ConfigMap
-ConfigMap is just a storage unit intended for small amounts of data. In most cases, it provides Pods with environment variables for configuration settings.
+Environment variables are variables applied to your program/application dynamically during runtime, based on which the way your program/application acts is different. Examples of environment variables are a password of the database running for your app, paths for packages/libraries that your code depends on, and go build variables (GOARCH, GOOS) to create a binary file that conforms to your system.
 
- Define env variables in ConfigMap and reference the ConfigMap in a Pod spec
+ConfigMaps and Secrets are kubernetes resources to supply environment variables to the Pod your application is running on. They are just storage units intended for small amounts of data. Those storage units can be loaded into a Pod, becoming part of the container environment, so that application in the container can read the data.
 
 
+## 2. Four ways to add environment variables in the Pod
 
-## 1. Why are Services necessary for routing traffic in Kubernetes
-Pods can communicate via IP address and they just use the standard protocols(TCP/UDP). However, it is not a good approach to solely rely on an IP address for communication. Because Pods are managed by Deployment controllers, it is hard to keep track of a new IP address whenever the Pod is replaced. The ideal solution would be to assign a static IP address to the ever-chaning Pod, which is why the concept of **Service** is invented and come to play in Kubernetes.
+* Directly specify environment variables in the Pod spec
+* Create a ConfigMap from literal values and load it into the Pod
+* Create a ConfigMap populated from the environment file and load it into the Pod
+* Create a ConfigMap containing key-value pairs and load it into the Pod
 
+### 2.1. Directly specify environment variables in the Pod spec
 
-## 2. How Services route traffic
-Like the internet, Kubernetes have its own DNS(Domain Name System, called `kube-dns`), mapping friendly names to IP addresses. Creating a Service effectively registers it with the DNS server, using its Service name and IP address. When a DNS receives **Service name** it returns **the Service's IP address, which is static for the life of the Service**. With the selector label that bonds the Service to the Pod(e.g. `app: sleep-2`), Kubernetes routes the traffic to the Service and then toss it to the Pod.
+In the below example, `KIAMOL_CHAPTER` is specified at `spec.template.spec.containers.env` of the Deployment yaml spec.
 
-
-## 3. The simplest Service YAML spec
 {% highlight yaml %}
-apiVersion: v1    # Services use the core v1 API.
-kind: Service
+apiVersion: apps/v1
+kind: Deployment
 metadata:
-  name: sleep-2   # The name of a Service is used as the DNS domain name.
-# The specification requires a selector and a list of ports.
+  name: sleep
 spec:
   selector:
-    app: sleep-2  # Matches all Pods with an app label set to sleep-2.
-  ports:
-    - port: 80    # Listens on port 80 and sends to port 80 on the Pod
+    matchLabels:
+      app: sleep
+  template:
+    metadata:
+      labels:
+        app: sleep
+    spec:
+      containers:
+        - name: sleep
+          image: kiamol/ch03-sleep
+          env:
+          - name: KIAMOL_CHAPTER
+            value: "04"
 {% endhighlight %}
 
+It is the most straight-forward way to supply environment variables to the Pod. A downside of it is that if you need to make configuration changes you need to perform an update with a replacement Pod, which will results in frequent Pod replacements.
 
-## 4. Three scenarios of routing traffic
-There are roughly three types of services, depending on scenarios :
- * routing traffic between pods in the same cluster
- * routing external traffic to internal pods
- * routing traffic outside a Kubernetes cluster.
+### 2.2. Create ConfigMaps from literal values and load it into the Pod
 
+Real application usually have more complex configuration requirements, which is when you use ConfigMaps. As mentioned above, ConfigMaps are just a storage unit that has data in the form of key-value pairs. To load a ConfigMap into a Pod, the ConfigMap needs to exist before you deploy the Pod. Below is the kubectl command to create a ConfigMap.
 
-### 4-1. Routing traffic between Pods
-This is the default type of Service and it is called **ClusterIP**. The assigned IP address works only within the cluster, so ClusterIP Services are useful only for communicating between Pods. Below is the basic YAML spec for ClusterIP Service.
+{% highlight shell %}
+# create a ConfigMap with data from the command line:
+❯ kubectl create configmap sleep-config-literal --from-literal=kiamol.section='4.1'
+error: failed to create configmap: configmaps "sleep-config-literal" already exists
+
+# check the ConfigMap details:
+❯ kubectl get cm sleep-config-literal
+NAME                   DATA   AGE
+sleep-config-literal   1      47h
+{% endhighlight %}
+
+Then deploy the updated app to use the ConfigMap.
 
 {% highlight yaml %}
-apiVersion: v1
-kind: Service
+apiVersion: apps/v1
+kind: Deployment
 metadata:
-  name: numbers-api     # The Service uses the domain name numbers-api.
+  name: sleep
 spec:
-  ports:
-    - port: 80          # The port the Service listens on
   selector:
-    app: numbers-api    #  Traffic is routed to Pods with this label.
-  type: ClusterIP       #  This Service is available only to other Pods.
+    matchLabels:
+      app: sleep
+  template:
+    metadata:
+      labels:
+        app: sleep
+    spec:
+      containers:
+        - name: sleep
+          image: kiamol/ch03-sleep
+          env:
+          - name: KIAMOL_CHAPTER
+            value: "04"
+          - name: KIAMOL_SECTION              # a new env var from ConfigMap 
+            valueFrom:
+              configMapKeyRef:              
+                name: sleep-config-literal    # ConfigMap name
+                key: kiamol.section           # the data item to load
 {% endhighlight %}
 
-After deploying a Service called `numbers-api`, the Service has its own IP address. However, an external IP is not yet assigned because the ClusterIP Service is available only within the cluster.
+After deploying the above yaml spec, check the `KIAMOL_SECTION` environment variable.
 
 {% highlight shell %}
-❯ kubectl apply -f numbers/api-service.yaml
-service/numbers-api created
-❯ kubectl get svc numbers-api
-NAME          TYPE        CLUSTER-IP      EXTERNAL-IP   PORT(S)   AGE
-numbers-api   ClusterIP   10.104.95.136   <none>        80/TCP    8s
+# create a ConfigMap with data from the command line:
+❯ kubectl exec deploy/sleep -- sh -c 'printenv | grep "^KIAMOL"'
+KIAMOL_CHAPTER=04
 {% endhighlight %}
 
 
-### 4-2. Routing external traffic to Pods
-A **LoadBalancer** Service integrates with an exteranl load balancer, which sends traffic to the cluster. The Service sends the traffic to a Pod, using the same label-selector mechanism to identify a target Pod. You might have many Pods that match the label selector for the Service, so the cluster needs to choose a node to send the traffic to and then choose a Pod on that node. But this issue is taken care of by Kubernetes. All you need to do is deploy a LoadBalancer Service. Below is the basic LoadBalancer Service YAML spec.
+### 2.3. Create a new ConfigMap populated from the environment file and load it into the Pod
+
+To supply a lot of configuration data in one scoop, create an environment file that can be loaded to create a ConfigMap is a good option to consider. For example, save a file `ch04.env` with the following content.
+
+```
+# Environment files use a new line for each variable.
+KIAMOL_CHAPTER=ch04
+KIAMOL_SECTION=ch04-4.1
+KIAMOL_EXERCISE=try it now
+```
+
+Then create a ConfigMap with this env file.
+
+{% highlight shell %}
+# load an environment variable into a new ConfigMap:
+❯ kubectl create configmap sleep-config-env-file --from-env-file=sleep/ch04.env
+error: failed to create configmap: configmaps "sleep-config-env-file" already exists
+# check the details of the ConfigMap:
+❯ kubectl get cm sleep-config-env-file
+NAME                    DATA   AGE
+sleep-config-env-file   3      47h
+{% endhighlight %}
+
+Next, update the Pod to use the new ConfigMap.
 
 {% highlight yaml %}
-apiVersion: v1
-kind: Service
+apiVersion: apps/v1
+kind: Deployment
 metadata:
-  name: numbers-web
+  name: sleep
 spec:
-  ports:
-    - port: 8080          # The port the Service listens on
-      targetPort: 80      # The port the traffic is sent to on the Pod
   selector:
-    app: numbers-web
-  type: LoadBalancer      # This Service is available for external traffic.
+    matchLabels:
+      app: sleep
+  template:
+    metadata:
+      labels:
+        app: sleep
+    spec:
+      containers:
+        - name: sleep
+          image: kiamol/ch03-sleep
+          envFrom:                            # newly added block to reference a ConfigMap
+          - configMapRef:                     # newly added block to refernece a ConfigMap
+              name: sleep-config-env-file     # newly added block to refernece a ConfigMap
+          env:
+          - name: KIAMOL_CHAPTER
+            value: "04"
+          - name: KIAMOL_SECTION
+            valueFrom:
+              configMapKeyRef:              
+                name: sleep-config-literal
+                key: kiamol.section
 {% endhighlight %}
 
-Once setting this Service up, the external IP is assigned so you are no longer required to do port forward.
+After deploying a new Deployment yaml spec, print out the environment variables. You will meet the interesting facts.
 
 {% highlight shell %}
-❯ kubectl apply -f numbers/web-service.yaml
-service/numbers-web created
-❯ kubectl get svc numbers-web
-NAME          TYPE           CLUSTER-IP      EXTERNAL-IP   PORT(S)          AGE
-numbers-web   LoadBalancer   10.107.214.57   localhost     8080:32007/TCP   10s
+# update the Pod to use the new ConfigMap:
+❯ kubectl apply -f sleep/sleep-with-configMap-env-file.yaml
+deployment.apps/sleep configured
+# check the values in the container:
+❯ kubectl exec deploy/sleep -- sh -c 'printenv | grep "^KIAMOL"'
+error: unable to upgrade connection: container not found ("sleep")
+snam@C02FL4Y9MD6T ch04 % kubectl exec deploy/sleep -- sh -c 'printenv | grep "^KIAMOL"'
+KIAMOL_EXERCISE=try it now
+KIAMOL_SECTION=4.1
+KIAMOL_CHAPTER=04
 {% endhighlight %}
 
+> When the same environment variable is supplied by multiple sources(one by ConfigMap defined under `env` and the other under `envFrom` in this example), the environment variables defined with `env` in the Pod spec override the values defined with `envFrom`.
 
-### 4-3. Routing traffic outside Kubernetes
-When you want to integerate some resources(e.g. database) running outside your cluster with any nodes running within the cluster, you need to use an **ExternalName Service**. ExternalName Services create a domain name alias and register it in the DNS server. When the Pod makes a lookup request using the local name, the DNS server resolves it to a fully qualified external name. Below is an example of the Service YAML spec.
+
+### 2.3. Create a ConfigMap containing key-value pairs and load it into the Pod
+
+This will be the most common way to use a ConfigMap. Key-value pairs for environment variables will be specified in the `data` section inside of ConfigMap. Please refer to the below example.
 
 {% highlight yaml %}
 apiVersion: v1
-kind: Service
+kind: ConfigMap
 metadata:
-  name: numbers-api   # The local domain name of the Service in the cluster
-spec:
-  type: ExternalName
-  externalName: raw.githubusercontent.com   # The domain to resolve
+  name: todo-web-config-dev
+data:
+  config.json: |-
+    {
+      "ConfigController": {
+        "Enabled" : true
+      }
+    }
 {% endhighlight %}
 
-Check the Service configuration.
+The Pod bound with `todo-web` Deployment(see the spec below) will load this ConfigMap and mount `config.json` file onto the path `/app/config` in the container. The ConfigMap is treated like a directory.
+
+{% highlight yaml %}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: todo-web
+spec:
+  selector:
+    matchLabels:
+      app: todo-web
+  template:
+    metadata:
+      labels:
+        app: todo-web
+    spec:
+      containers:
+        - name: web
+          image: kiamol/ch04-todo-list 
+          volumeMounts:
+            - name: config
+              mountPath: "/app/config"      # ConfigMap mounted path 
+              readOnly: true
+      volumes:
+        - name: config
+          configMap:
+            name: todo-web-config-dev       # Names a ConfigMap to load
+{% endhighlight %}
+
+
+
+## 3. Hierarchy of configuration sources
+
+1. Default settings are baked into the container image.
+2. The actual settings for each environment are stored in a ConfigMap and surfaced into the container filesystem.
+3. Any settings that need to be tweaked can be applied as environment variables in the Pod spec for the Deployment.
+
+
+## 4. Two ways to configure sensitive data with Secrets
+
+* Reference a Secret object directly in the Pod
+* Load a sensitive data into a file and reference the file location in the Pod
+
+
+
+### 4.1. Reference a Secret object directly in the Pod
 
 {% highlight shell %}
-❯ kubectl apply -f numbers-services/api-service-externalName.yaml
-service/numbers-api created
-❯ kubectl get svc numbers-api
-NAME          TYPE           CLUSTER-IP   EXTERNAL-IP                 PORT(S)   AGE
-numbers-api   ExternalName   <none>       raw.githubusercontent.com   <none>    3m11s
+# now create a secret from a plain text literal:
+❯ kubectl create secret generic sleep-secret-literal --from-literal=secret=shh...
+deployment.apps/todo-web created
+
+# show the friendly details of the Secret:
+❯ kubectl describe secret sleep-secret-literal
+Name:         sleep-secret-literal
+Namespace:    default
+Labels:       <none>
+Annotations:  <none>
+
+Type:  Opaque
+
+Data
+====
+secret:  6 bytes
+
+# retrieve the encoded Secret value:
+❯ kubectl get secret sleep-secret-literal -o jsonpath='{.data.secret}'
+c2hoLi4u%  
+
+# and decode the data:
+❯ kubectl get secret sleep-secret-literal -o jsonpath='{.data.secret}' | base64 -d
+shh...%  
 {% endhighlight %}
 
-If you want to route to an IP address rather than a domain name, you can use another option called **headless Services**, which are the ClusterIP type of Service but without a label selector so they will never match any Pods. Instead, the service is deployed with an **endpoint** resource that explicitly lists the IP addresses the Service should resolve. Please refer to an YAML spec example below.
+> Creating Secrets from a literal value is equivalent to base64 encoding, which isn't really a security feature but just does prevent accidental exposure of secrets to someone looking over your shoulder.
+
+The way to load Secrets to the Pod is almost the same with ConfigMaps, as you can see below.
+
+{% highlight yaml %}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sleep
+spec:
+  selector:
+    matchLabels:
+      app: sleep
+  template:
+    metadata:
+      labels:
+        app: sleep
+    spec:
+      containers:
+        - name: sleep
+          image: kiamol/ch03-sleep
+          env:                                # Environment variables
+          - name: KIAMOL_SECRET               # Variable name in the container
+            valueFrom:                        # loaded from an external source  
+              secretKeyRef:                   # which is a Secret       
+                name: sleep-secret-literal    # Names the Secret
+                key: secret                   # Key of the Secret data item
+{% endhighlight %}
+
+Confirm that `KIAMOL_SECRET` is supplied to the Pod.
+
+{% highlight shell %}
+# update the sleep Deployment:
+❯ kubectl apply -f sleep/sleep-with-secret.yaml
+deployment.apps/sleep configured
+
+# check the environment variable in the Pod:
+❯ kubectl exec deploy/sleep -- printenv KIAMOL_SECRET
+shh...
+{% endhighlight %}
+
+As you can observe in this case, the sensitive data provided by a literal Secret is easily exposed. Providing a sensitive data in a Secret yaml spec like below has the same issue.
 
 {% highlight yaml %}
 apiVersion: v1
-kind: Service
+kind: Secret                            # Secret is the resource type.
 metadata:
-  name: numbers-api
-spec:
-  type: ClusterIP      # No selector field makes this a headless Service.
-  ports:
-    - port: 80
----
-kind: Endpoints        # The endpoint is a separate resource.
+ name: todo-db-secret-test             # Names the Secret
+type: Opaque                            # Opaque secrets are for text data.
+stringData:                             # stringData is for plain text.
+ POSTGRES_PASSWORD: "kiamol-2*2*"      # The secret key and value.
+{% endhighlight %}
+
+
+### 4.2. Load a sensitive data into a file and reference the file location in the Pod
+{% highlight yaml %}
 apiVersion: v1
+kind: Secret
 metadata:
-  name: numbers-api
-subsets: 
-  - addresses:         # It has a static list of IP addresses . . . 
-      - ip: 192.168.123.234
-    ports:
-      - port: 80       # and the ports they listen on.
+  name: todo-db-secret-test
+type: Opaque
+stringData:
+  POSTGRES_PASSWORD: "kiamol-2*2*"
 {% endhighlight %}
 
-Replace the ExternalName Service with the headless Service, check the Service and endpoints, and verify the DNS lookup.
 
-{% highlight shell %}
-❯ kubectl delete svc numbers-api
-service "numbers-api" deleted
-❯ kubectl apply -f numbers-services/api-service-headless.yaml
-service/numbers-api created
-endpoints/numbers-api created
-❯ kubectl get svc numbers-api
-NAME          TYPE        CLUSTER-IP     EXTERNAL-IP   PORT(S)   AGE
-numbers-api   ClusterIP   10.108.78.48   <none>        80/TCP    17s
-❯ kubectl get endpoints numbers-api
-NAME          ENDPOINTS            AGE
-numbers-api   192.168.123.234:80   26s
-❯ kubectl get deploy
-NAME          READY   UP-TO-DATE   AVAILABLE   AGE
-numbers-api   1/1     1            1           65m
-numbers-web   1/1     1            1           65m
-❯ kubectl exec deploy/numbers-web -- sh -c 'nslookup numbers-api | grep "^[^*]"'
-Server:		10.96.0.10
-Address:	10.96.0.10:53
-Name:	numbers-api.default.svc.cluster.local
-Address: 10.108.78.48
+{% highlight yaml %}
+    spec:
+      containers:
+        - name: db
+          image: postgres:11.6-alpine
+          env:
+          - name: POSTGRES_PASSWORD_FILE          # Sets the path to the file
+            value: /secrets/postgres_password
+          volumeMounts:                           # Mounts a Secret volume
+            - name: secret                        # Names the volume
+              mountPath: "/secrets"
+      volumes:
+        - name: secret
+          secret:                                 # Volume loaded from a Secret 
+            secretName: todo-db-secret-test       # Secret name
+            defaultMode: 0400                     # Permissions to set for files
+            items:                                # Optionally names the data items
+            - key: POSTGRES_PASSWORD
+              path: postgres_password
 {% endhighlight %}
 
-If you look the DNS lookup output above, you will find the two interesting facts. First, the resolved IP address(`10.108.78.48`) is not the endpoint but the ClusterIP address. Second, the domain name ends with `.default.svc.cluster.local`. We will get answers below.
+Look at the above Pod spec. The value for `POSTGRES_PASSWORD_FILE` is not a sensitive data itself but a path where the data is stored. When this Pod is deployed, Kubernetes loads the value of the Secret item into a file at the path `/secrets/postgres_password`. That file will be set with 0400 permissions, which means it can be read by the container user but not by any other users, which effectively minimizes the exposure of the sensitive data.
 
 
-## 5. Understanding Kubernetes Service resolution
-To answer the first question, we need to keep in mind that Services have the up-to-date endpoint list. Therefore, clients need to visit the Service first to get the latest endpoint, and this is why the `numbers-api` resolves to its Service IP address.
 
-Pods access the network through the a network proxy called `kube-proxy`, another internal Kubernetes component, and that uses packet filtering to send the Service's ClusterIP to the real endpoint. The reason `kube-proxy` has the up-to-date endpoint list is that Services have a controller that keeps the endpoint list updated whenever there are changes to Pods. Thus, `kube-proxy` is able to refresh the endpoint list whenever clients visits the static ClusterIP address.
 
-For the second question, we need to understand a new Kubernetes resource - **namespace**. Every Kubernetes resource lives inside a namespace, which is a resource you can use to group other resources. Namespaces are a way to logically partition a Kubernetes cluster. In the above example, because the Service is in the `default` namespace, the suffix of the domain name begins with `.default.svc.cluster.local`. In the same manner, the full domain name for `kube-dns` in the `kube-system` namespace is `kube-dns.kube-system.svc.cluster.local`, as described below.
 
-{% highlight shell %}
-❯ kubectl get svc -n kube-system
-NAME       TYPE        CLUSTER-IP   EXTERNAL-IP   PORT(S)                  AGE
-kube-dns   ClusterIP   10.96.0.10   <none>        53/UDP,53/TCP,9153/TCP   4d21h
-❯ kubectl exec deploy/numbers-web -- sh -c 'nslookup kube-dns.kube-system.svc.cluster.local | grep "^[^*]"'
-Server:		10.96.0.10
-Address:	10.96.0.10:53
-Name:	kube-dns.kube-system.svc.cluster.local
-Address: 10.96.0.10
-{% endhighlight %}
+
 
 

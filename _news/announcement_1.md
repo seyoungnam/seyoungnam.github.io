@@ -1,7 +1,7 @@
 ---
 layout: post
-date: 2023-02-06 00:01:24
+date: 2023-05-15 00:00:20
 inline: true
 ---
 
-<a href="https://seyoungnam.github.io/blog/2023/layoffs/">New post - 갑작스런 layoff 발표</a>
+<a href="https://seyoungnam.github.io/_k8s/03-config/">New post - 03 ConfigMaps and Secrets</a>
