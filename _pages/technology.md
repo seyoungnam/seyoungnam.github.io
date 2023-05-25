@@ -14,6 +14,6 @@ children:
     - title: Istio
       permalink: /istio/
     - title: divider
-    - title: AWS
-      permalink: /aws/
+    - title: Network
+      permalink: /network/
 ---
