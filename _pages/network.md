@@ -11,7 +11,7 @@ nav_order: 6
   <ul class="post-list">
     <li>
       <h3>
-        <a class="post-title" href="/_network/01-osi-tcpip">01 OSI vs TCP/IP Model</a>
+        <a class="post-title" href="/network/01-osi-tcpip">01 OSI vs TCP/IP Model</a>
       </h3>
     </li>
   </ul>
