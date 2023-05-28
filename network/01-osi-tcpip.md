@@ -1,6 +1,6 @@
 ---
 layout: post
-title: 01 OSI vs TCP/IP Model
+title: 01 Networking Models
 date: 2023-05-20 18:00:00
 giscus_comments: true
 description: 

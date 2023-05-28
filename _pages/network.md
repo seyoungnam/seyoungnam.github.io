@@ -13,6 +13,11 @@ nav_order: 6
       <h3>
         <a class="post-title" href="/network/01-osi-tcpip">01 OSI vs TCP/IP Model</a>
       </h3>
+    </li>    
+    <li>
+      <h3>
+        <a class="post-title" href="/network/02-tcpip">02 TCP/IP Basics</a>
+      </h3>
     </li>
   </ul>
 </div>

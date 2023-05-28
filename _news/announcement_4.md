@@ -1,7 +1,7 @@
 ---
 layout: post
-date: 2023-05-15 00:00:20
+date: 2023-05-15 23:59:59
 inline: true
 ---
 
-<a href="https://seyoungnam.github.io/_k8s/03-config/">New post - 03 ConfigMaps and Secrets</a>
+<a href="https://seyoungnam.github.io/blog/2023/birthday/">2023년 생일</a>
