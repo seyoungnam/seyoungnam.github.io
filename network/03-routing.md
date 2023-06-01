@@ -123,3 +123,45 @@ tags: router port NAT PAT
   * expose one computer to the entire internet
   * anything that comes in unsolicited from the internet, send it to a particular computer
   * able to see what kind of evil people are trying to do
+
+<br>
+
+## Static Routes
+
+### Routing table 1
+
+|Network Destination | Netmask        | Gateway     | Interface   | Metric      |
+|:-----------        |:-----------    |:----------- | ----------- | ----------- |
+|0.0.0.0             |0.0.0.0         | 192.168.4.1 |192.168.4.76 |25           |
+|127.0.0.0           |255.0.0.0       | On-link     |127.0.0.1    |331          |
+|127.0.0.1           |255.255.255.255 | On-link     |127.0.0.1    |331          |
+|127.255.255.255     |255.255.255.255 | On-link     |127.0.0.1    |331          |
+|192.168.4.0         |255.255.255.0   | On-link     |192.168.4.76 |281          |
+|192.168.4.76        |255.255.255.255 | On-link     |192.168.4.76 |281          |
+|192.168.4.255       |255.255.255.255 | On-link     |192.168.4.76 |281          |
+|224.0.0.0           |240.0.0.0       | On-link     |127.0.0.1    |331          |
+|224.0.0.0           |240.0.0.0       | On-link     |192.168.4.76 |281          |
+
+
+1. I don't care where it's going to. Send it out on my gateway(192.168.4.1) through my network card(192.168.4.76)
+2. **Unless** the destination address starts with 127, don't go to the gateway and just send it to my loopback(127.0.0.1)
+3. **Unless** the destination starts with 192.168.4, do not send it out the gateway, just send it out my NIC(192.168.4.76)
+4. 224 stands for multicast. Anything starts with 224 is a class D. It allows a computer to take on a second IP address that starts with a 224. For example, it is used to allow multi users to watch a video at the same time.
+
+<br>
+
+### Routing table 2
+
+|Network Destination | Netmask        | Gateway     | Interface   |
+|:-----------        |:-----------    |:----------- | ----------- |
+|17.18.19.1          |255.255.255.255 |0.0.0.0      |WAN          |
+|192.168.4.0         |255.255.255.0   |0.0.0.0      |LAN & WLAN   |
+|17.18.19.0          |255.255.255.0   |0.0.0.0      |WAN          |
+|169.254.0.0         |255.255.0.0     |0.0.0.0      |LAN & WLAN   |
+|0.0.0.0             |0.0.0.0         |17.18.19.1   |WAN          |
+
+1. If the destination IP address is 17.18.19.1, don't go out to the gateway, send it to the WAN.
+2. If the destination IP address starts with 192.168.4, send it up to that 192.168.4.x/24 network through the LAN connection
+3. Anything for 17.18.19.x, no gateway and send it out through the WAN
+4. skip for now
+5. This is a default route. Send everything over to the other system(17.18.19.1)
