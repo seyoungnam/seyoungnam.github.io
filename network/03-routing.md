@@ -165,3 +165,70 @@ tags: router port NAT PAT
 3. Anything for 17.18.19.x, no gateway and send it out through the WAN
 4. skip for now
 5. This is a default route. Send everything over to the other system(17.18.19.1)
+
+<br>
+
+## Dynamic Routing
+
+* Dynamic routing protocols use metrics to determine routes
+* The metric value is something that can be used to look at a lot of different issues
+* The metric was based on the hop count - simply the number of routers it took to get to a particular network ID
+* The metric can take in all kinds of considerations
+  * MTU(Maximum Transmission Unit) - In a particular frame, how much data can you haul
+    * Ethernet has a default MTU size of 1,500 bytes
+    * The internet isn't made out of just pure Ethernet
+  * Bandwidth(a 56k line vs a 10 gigabit line)
+  * Cost
+  * Latency - how long does it take this particular route
+* Two main dynamic routing protocols
+  * **Distance vector**
+    * A router send his routing table to neighboring routers. They will compare it to their own and then determine what are the best routes they can use
+    * One problem of the distance vector is lean heavily on the concept of hop count
+    * The other big issue is that they send all of this stuff at a given interval. If a neighboring router goes down we have to wait for the next interval
+  * **Link state**
+    * more modern, improvements over distance vector
+    * A link state router is going to send out a ping to make sure they are there
+    * If the individual routing table is updated, the router will let people know on the fly
+* All dynamic routing protocols can be broken up into **EGP(Exterior Gateway Protocols)** or **IGP(Interior Gateway Protocols)**
+  * Autonomous system is one organization that has control of their own particular routers
+  * Any time you want to communicate outside of an autonomous system you use an EGP
+  * Otherwise you're using an IGP
+  * BGP(Border Gateway Protocol) is the only EGP through which a big Internet Service Provider talks to other ISPs.
+  * Each ISP is assigned an autonomous system number(ASN). When you send a data from your router to other routers, you are not even really using IP addresses. You use these AS numbers to send the data from one to the other. That's unique to BGP
+    * BGP is the EGP protocol used for inter-autonomous system routing
+
+<br>
+
+## RIP(Routing Information Protocol)
+
+* RIP is an IGP, not used to connect autonomous systems
+* RIP is a distance vector protocol that uses hop count to determine routes
+* RIP1 used only classful networks(doesn't understand CIDR based IP addresses)
+* RIP's maximum hop count is 15
+
+<br>
+
+## OSPF(Open Shortest Path First)
+
+* The number one interior gateway protocol
+* OSPF is a link state protocol
+* OSPF uses area IDs and converges very quickly
+
+<br>
+
+## BGP(Border Gateway Protocol)
+
+* BGP is the primary protocol for the Internet
+* BGP breaks the entire Internet into just over 20,000 autonomous systems(AS)
+* AS is a group of one or more router networks under the control of a single entity like a big ISP or a branch of the federal government
+* An AS has direct or indirect control of all the routers, all the networks, all the subnets within their own AS
+* Every AS on the Internet has a 32 bit autonomous system number(ASN)
+* Since ASs have total control on their own network routes, they can route between the routers any way they want. And it's usually done via OSPF.
+* For the Internet, when ASs interconnect, they must use BGP
+* BGP routes data between ASs
+  * A router sending a chunk of data out to the Internet only needs to know where its own BGP router is located
+  * That BGP router at the edge of the autonomous system only needs to know the AS number of where that data is going
+  * In essence it greatly reduces the load on all BGP routers
+
+
+
