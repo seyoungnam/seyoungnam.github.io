@@ -24,6 +24,11 @@ nav_order: 6
         <a class="post-title" href="/network/03-routing">03 Routing</a>
       </h3>
     </li>
+    <li>
+      <h3>
+        <a class="post-title" href="/network/04-tcpip-app">04 TCP/IP Applications</a>
+      </h3>
+    </li>
   </ul>
 </div>
 
