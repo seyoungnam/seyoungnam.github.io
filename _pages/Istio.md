@@ -1,6 +1,6 @@
 ---
 layout: page
-permalink: /k8s/
+permalink: /istio/
 title: Istio
 description: Istio offical doc in Korean
 nav: false
