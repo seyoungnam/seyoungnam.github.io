@@ -1,7 +1,7 @@
 ---
 layout: post
-date: 2023-05-29 23:55:00
+date: 2024-02-04 22:45:00
 inline: true
 ---
 
-<a href="https://seyoungnam.github.io/network/04-tcpip-app/">04 TCP/IP Applications</a>
+<a href="https://seyoungnam.github.io/istio/02-security/">Concepts - Security</a>
