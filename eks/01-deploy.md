@@ -1,6 +1,6 @@
 ---
 layout: post
-title: Local Env Setting and EKS Deploy
+title: O1 Local Env Setting and EKS Deploy
 date: 2026-03-18 17:10:00
 giscus_comments: true
 description: 
