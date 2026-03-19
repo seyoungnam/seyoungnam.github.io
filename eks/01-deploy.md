@@ -283,9 +283,9 @@ aws eks list-addons --cluster-name myeks \
 
 <br>
 
-## Check Worker Node Info
+## Worker Nodes
 
-SSH into node:
+### ssh to worker nodes
 ```bash
 # check node public IP and assign vars
 aws ec2 describe-instances --query "Reservations[*].Instances[*].{PublicIPAdd:PublicIpAddress,PrivateIPAdd:PrivateIpAddress,InstanceName:Tags[?Key=='Name']|[0].Value,Status:State.Name}" --filters Name=instance-state-name,Values=running --output table
@@ -323,43 +323,104 @@ ssh ec2-user@$NODE2
 exit
 ```
 
-Check node configs in ssh:
+### Worker Node Specs
+
+A worker node should meet the minimum spec requirements to account not just for your application's requirements, but also for the overhead of Kubernetes system components (`kubelet`, container runtime) and AWS-specific DaemonSets (like the VPC CNI, kube-proxy, and CoreDNS). Let's look around the current worker node specs.
+
+First, switch to root user account:
 ```bash
-# switch to root user account
 sudo su - 
 whoami
+```
 
-# check host info
+#### Host Hardware, OS, and Kernel
+The `hostnamectl` command provides a snapshot of the node's system and hardware configuration. The Static hostname (`ip-192-168-2-27.ec2.internal`) acts as the node's unique identifier within the Kubernetes cluster. This node is running Amazon Linux 2023 with a modern 6.12 Kernel, which provides native support for `cgroup v2` and `eBPF`—essential features for modern container resource management and advanced networking. Finally, the `t3.medium` hardware model confirms the instance has 2 vCPU and 4 GB of RAM, satisfying the practical minimum requirements to comfortably run Kubernetes system components alongside your workloads.
+```bash
 hostnamectl
-...
+ Static hostname: ip-192-168-2-27.ec2.internal
+       Icon name: computer-vm
+         Chassis: vm 🖴
+      Machine ID: ec2e166b60f2e04c0cdc1f8c30c171fa
+         Boot ID: 64bbb6075c4a41bd90f809a4da1c3748
   Virtualization: amazon
-Operating System: Amazon Linux 2023.10.20260302
+Operating System: Amazon Linux 2023.10.20260216
      CPE OS Name: cpe:2.3:o:amazon:amazon_linux:2023
-          Kernel: Linux 6.12.73-95.123.amzn2023.x86_64
+          Kernel: Linux 6.12.68-92.122.amzn2023.x86_64
     Architecture: x86-64
  Hardware Vendor: Amazon EC2
   Hardware Model: t3.medium
-  
-# check SELinux config : Permissive
+Firmware Version: 1.0
+```
+
+#### SELinux Configuraitons
+The outputs from the `getenforce` and `sestatus` commands confirm that SELinux is enabled but operating in Permissive mode. Kubernetes recommends this configuration for worker nodes for the following reasons:
+- **Unrestricted Host Interaction**: Containers frequently need to interact with the host filesystem—such as when configuring pod networking or mounting storage volumes. Strict SELinux policies can inadvertently block these essential operations.
+- **Kubelet Stability**: If SELinux is set to `Enforcing` mode, the `kubelet` may encounter permission-denied errors when attempting to access the system resources required to provision and manage the container lifecycle.
+- **Auditable Troubleshooting**: In `Permissive` mode, SELinux continues to monitor access and log policy violations, but it does not actively block the actions. This ensures smooth cluster operation while still providing administrators with valuable audit logs for troubleshooting and security analysis.
+
+```bash
 getenforce
-sestatus   
+Permissive
 
-# Swap should not be used
+sestatus
+SELinux status:                 enabled
+SELinuxfs mount:                /sys/fs/selinux
+SELinux root directory:         /etc/selinux
+Loaded policy name:             targeted
+Current mode:                   permissive
+Mode from config file:          permissive
+Policy MLS status:              enabled
+Policy deny_unknown status:     allowed
+Memory protection checking:     actual (secure)
+Max kernel policy version:      33
+``` 
+
+#### Swap Space
+Swap space is a designated portion of a computer's physical storage drive (like an HDD or SSD) that the operating system uses as an extension of its physical RAM, when the RAM gets nearly full. The `free -h` and `cat /etc/fstab` commands confirm that swap space is completely disabled (`0B`) and will not be remounted upon reboot. Historically, the kubelet requires swap to be disabled to ensure predictable memory allocation; if a node runs out of memory, Kubernetes needs to accurately trigger Pod evictions rather than allowing the OS to silently swap memory to disk, which severely degrades performance.
+```bash
 free -h
-cat /etc/fstab
+               total        used        free      shared  buff/cache   available
+Mem:           3.7Gi       343Mi       2.2Gi       1.0Mi       1.2Gi       3.2Gi
+Swap:             0B          0B          0B
 
+
+cat /etc/fstab
+#
+UUID=417dd49c-6f90-4edd-8517-c87dc5543f08     /           xfs    defaults,noatime  1   1
+UUID=C42B-1BC6        /boot/efi       vfat    defaults,noatime,uid=0,gid=0,umask=0077,shortname=winnt,x-systemd.automount 0 2
+```
+
+#### Cgroup Version
+ the `stat` command checks the filesystem type for cgroups. The output `cgroup2fs` confirms the node is running cgroup v2. Kubernetes uses cgroups to enforce CPU and memory limits on containers, and cgroup v2 is the modern, unified standard required by recent Kubernetes releases for improved resource isolation and management.
+```bash
 # check cgroup: version 2
 stat -fc %T /sys/fs/cgroup/
-cgroup2fs
+cgroup2fs # tmpfs if v1
+```
 
+#### Overlay
+Confirm `overlay` kernel module is loaded. OverlayFS is a type of "union mount" filesystem, which allows you to take two different directories from different underlying filesystems and merge them together so they appear as a single, unified directory tree. It is arguably most famous for being **the underlying storage technology that powers modern container runtimes like Docker, containerd, and Kubernetes**.
+```bash
 # check overlay kernel module load. For more info: https://interlude-3.tistory.com/47
 lsmod | grep overlay
+overlay               217088  7
+```
 
-# browse containerd snapshot list
+#### Containerd snapshot list
+
+```bash
 ctr -n k8s.io snapshots ls
 ls -la /var/lib/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/
 tree /var/lib/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/ -L 3
+```
 
+#### sysctl kernal networking params
+The commands check the sysctl kernel parameters on the node, highlighting three critical configurations required for Kubernetes networking:
+- `net.ipv4.ip_forward = 1`: Enables IP forwarding. This turns the node into a router, allowing it to forward packets coming from the container network out to the external internet or other VPC subnets.
+- `net.bridge.bridge-nf-call-iptables = 1`: Ensures that IPv4 traffic crossing network bridge interfaces is passed to the host's `iptables` for filtering and NAT. This is mandatory for `kube-proxy` to successfully route traffic to Kubernetes Services.
+- `net.bridge.bridge-nf-call-ip6tables = 1`: Does the exact same thing as above, but for IPv6 network traffic, ensuring compatibility for dual-stack or IPv6-only clusters.
+
+```bash
 # check kernel params
 tree /etc/sysctl.d/
 cat /etc/sysctl.d/00-defaults.conf
@@ -371,11 +432,15 @@ net.bridge.bridge-nf-call-iptables = 1
 net.ipv4.ip_forward = 1
 ```
 
-Check time sync:
+#### Time sync
+Time must be perfectly synced across all nodes in a cluster. These commands verify the chrony configuration and confirm the node is actively receiving time data from AWS's internal NTP(Network Time Protocol) servers.
 ```bash
 # check configs
 grep "^[^#]" /etc/chrony.conf
 tree /run/chrony.d/
+/run/chrony.d/
+├── amazon-pool.sources -> /usr/share/amazon-chrony-config/amazon-pool_aws.sources
+└── link-local-ipv4.sources -> /usr/share/amazon-chrony-config/link-local-ipv4_unspecified.sources
 
 # check time server pool
 cat /usr/share/amazon-chrony-config/link-local-ipv4_unspecified.sources
@@ -400,8 +465,9 @@ MS Name/IP address         Stratum Poll Reach LastRx Last sample
 ...
 ```
 
-Check Container Info:
-![crictl](https://iximiuz.com/containerd-command-line-clients/containerd-command-line-clients-2000-opt.png)
+#### Containers
+<img src="https://iximiuz.com/containerd-command-line-clients/containerd-command-line-clients-2000-opt.png" alt="crictl" style="width: 75%; max-width: 800px; height: auto;">
+
 
 ```bash
 # check basic info
@@ -435,8 +501,9 @@ localhost/kubernetes/pause                                                      
 localhost/kubernetes/pause                                                      latest                76040a49ba6f    2 weeks ago     linux/arm64    0B         265.6kB
 ```
 
-Check Containerd info:
-![containerd](https://iximiuz.com/containerd-command-line-clients/docker-and-kubernetes-use-containerd-2000-opt.png)
+#### Containerd
+<img src="https://iximiuz.com/containerd-command-line-clients/docker-and-kubernetes-use-containerd-2000-opt.png" alt="containerd" style="width: 75%; max-width: 800px; height: auto;">
+
 ```bash
 # check process
 pstree -a
@@ -732,7 +799,8 @@ Certificate:
 kubectl get csr
 ```
 
-Check CNI Config:
+#### CNI
+Below commands verify the installation and configuration of the AWS VPC CNI plugin on the worker node. The binaries required to set up pod networking are located in `/opt/cni/bin/`, while the configuration file (`/etc/cni/net.d/10-aws.conflist`) acts as the instruction manual, telling the container runtime exactly how to assign AWS VPC IP addresses to newly created pods.
 ```bash
 # check cni binary
 tree -pug /opt/cni/
@@ -748,7 +816,8 @@ tree /etc/cni
 cat /etc/cni/net.d/10-aws.conflist | jq
 ```
 
-Check Network Config:
+#### Network Configurations
+Inspect the low-level networking, routing, and firewall configurations on a worker node.
 ```bash
 # check network config
 ip route
@@ -761,14 +830,17 @@ iptables -t filter -S
 iptables -t mangle -S
 ```
 
-Check Storage Info:
+#### Storage
 ```bash
 lsblk
 df -hT
 findmnt
 ```
 
-Check Cgroup Info:
+#### Cgroup Configurations
+- `cgroup Version Validation`: stat and findmnt confirm the system is utilizing cgroup v2, the modern Linux standard for resource management.
+- `Resource Hierarchy`: The tree output illustrates the node's resource slices. The kubelet carefully divides resources between the operating system (`system.slice`), Kubernetes overhead (`runtime.slice`), and your workloads (`kubepods.slice`).
+- `Monitoring`: Tools like `systemd-cgls` and `systemd-cgtop` allow administrators to visualize and monitor the resource consumption of these specific control groups dynamically.
 ```bash
 # check cgroup: version 2
 stat -fc %T /sys/fs/cgroup/
