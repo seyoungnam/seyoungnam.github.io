@@ -841,6 +841,7 @@ findmnt
 - `cgroup Version Validation`: stat and findmnt confirm the system is utilizing cgroup v2, the modern Linux standard for resource management.
 - `Resource Hierarchy`: The tree output illustrates the node's resource slices. The kubelet carefully divides resources between the operating system (`system.slice`), Kubernetes overhead (`runtime.slice`), and your workloads (`kubepods.slice`).
 - `Monitoring`: Tools like `systemd-cgls` and `systemd-cgtop` allow administrators to visualize and monitor the resource consumption of these specific control groups dynamically.
+
 ```bash
 # check cgroup: version 2
 stat -fc %T /sys/fs/cgroup/
