@@ -1,9 +1,9 @@
 ---
 layout: distill
-title: 01 Understanding Kubernetes
-description: Most content in this document comes from "Learn Kubernetes in a Month of Lunches".
+title: 01 Introducing Kubernetes
+description: Most content in this document comes from "Kubernetes In Action, Second Edition".
 giscus_comments: true
-date: 2022-01-06
+date: 2026-03-22
 
 authors:
   - name: Elton Stoneman
@@ -33,21 +33,21 @@ toc:
 
 # Below is an example of injecting additional post-specific styles.
 # If you use this post as a template, delete this _styles block.
-_styles: >
-  .fake-img {
-    background: #bbb;
-    border: 1px solid rgba(0, 0, 0, 0.1);
-    box-shadow: 0 0px 4px rgba(0, 0, 0, 0.1);
-    margin-bottom: 12px;
-  }
-  .fake-img p {
-    font-family: monospace;
-    color: white;
-    text-align: left;
-    margin: 12px 0;
-    text-align: center;
-    font-size: 16px;
-  }
+# _styles: >
+#   .fake-img {
+#     background: #bbb;
+#     border: 1px solid rgba(0, 0, 0, 0.1);
+#     box-shadow: 0 0px 4px rgba(0, 0, 0, 0.1);
+#     margin-bottom: 12px;
+#   }
+#   .fake-img p {
+#     font-family: monospace;
+#     color: white;
+#     text-align: left;
+#     margin: 12px 0;
+#     text-align: center;
+#     font-size: 16px;
+#   }
 
 ---
 
