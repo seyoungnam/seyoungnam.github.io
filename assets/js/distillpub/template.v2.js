@@ -2372,7 +2372,7 @@ d-citation-list .references .title {
 
 
   var _ = {
-  	manual: _self.Prism && _self.Prism.manual,
+  	manual: true,
   	disableWorkerMessageHandler: _self.Prism && _self.Prism.disableWorkerMessageHandler,
   	util: {
   		encode: function encode(tokens) {
