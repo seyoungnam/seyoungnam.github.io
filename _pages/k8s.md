@@ -11,17 +11,22 @@ nav_order: 6
   <ul class="post-list">
     <li>
       <h3>
-        <a class="post-title" href="../../_k8s/01-understanding-k8s">01 Understanding Kubernetes</a>
+        <a class="post-title" href="../../_k8s/01-intro-k8s">01 Understanding Kubernetes</a>
       </h3>
     </li>
     <li>
       <h3>
-        <a class="post-title" href="../../_k8s/02-service">02 Connecting Pods over the network with Services</a>
+        <a class="post-title" href="../../_k8s/02-understanding-containers">02 Understanding Containers and Containerized Applications</a>
       </h3>
     </li>
     <li>
       <h3>
-        <a class="post-title" href="../../_k8s/03-config">03 ConfigMaps and Secrets</a>
+        <a class="post-title" href="../../_k8s/03-deploying-first-app">03 Deploying Your First Application on Kubernetes</a>
+      </h3>
+    </li>
+    <li>
+      <h3>
+        <a class="post-title" href="../../_k8s/04-navigating-the-k8s-api">04 Navigating the Kubernetes API and Object Model</a>
       </h3>
     </li>
   </ul>
