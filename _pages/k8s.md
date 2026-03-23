@@ -2,7 +2,7 @@
 layout: page
 permalink: /k8s/
 title: Kubernetes
-description: Study notes & book Summary of "Learn Kubernetes in a Month of Lunches"
+description: Study notes & book Summary of "Kubernetes In Action, Second Edition"
 nav: false
 nav_order: 6
 ---
@@ -11,22 +11,22 @@ nav_order: 6
   <ul class="post-list">
     <li>
       <h3>
-        <a class="post-title" href="../../_k8s/01-intro-k8s">01 Understanding Kubernetes</a>
+        <a class="post-title" href="{{ '/k8s/01-intro-k8s' | relative_url }}">01 Understanding Kubernetes</a>
       </h3>
     </li>
     <li>
       <h3>
-        <a class="post-title" href="../../_k8s/02-understanding-containers">02 Understanding Containers and Containerized Applications</a>
+        <a class="post-title" href="{{ '/k8s/02-understanding-containers' | relative_url }}">02 Understanding Containers and Containerized Applications</a>
       </h3>
     </li>
     <li>
       <h3>
-        <a class="post-title" href="../../_k8s/03-deploying-first-app">03 Deploying Your First Application on Kubernetes</a>
+        <a class="post-title" href="{{ '/k8s/03-deploying-first-app' | relative_url }}">03 Deploying Your First Application on Kubernetes</a>
       </h3>
     </li>
     <li>
       <h3>
-        <a class="post-title" href="../../_k8s/04-navigating-the-k8s-api">04 Navigating the Kubernetes API and Object Model</a>
+        <a class="post-title" href="{{ '/k8s/04-navigating-the-k8s-api' | relative_url }}">04 Navigating the Kubernetes API and Object Model</a>
       </h3>
     </li>
   </ul>
