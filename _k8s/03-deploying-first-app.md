@@ -1,10 +1,9 @@
 ---
 layout: distill
-title: 01 Deploying Your First Application on Kubernetes
-description: Most content in this document is based on [Kubernetes In Action, Second Edition](https://www.manning.com/books/kubernetes-in-action-second-edition) by Marko Lukša and Kevin Conner.
+title: 03 Deploying Your First Application on Kubernetes
+description: Most content in this document is based on "Kubernetes In Action, Second Edition" by Marko Lukša and Kevin Conner.
 giscus_comments: true
 date: 2026-03-22
-
 authors:
   - name: Seyoung Nam
     url: "https://www.linkedin.com/in/seyoungnam/"
@@ -14,11 +13,10 @@ toc:
     subsections:
       - name: 3.1 Deploying a Kubernetes Cluster
       - name: 3.2 Interacting with Kubernetes via kubectl
-      - name: 3.3 The First Deployment: From Command to Running App
+      - name: '3.3 The First Deployment: From Command to Running App'
       - name: 3.4 Summary of Objects Created
   - name: Critical OS & K8s Insights
   - name: Conclusion
-
 ---
 
 ## Executive Summary

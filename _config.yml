@@ -3,9 +3,9 @@
 # -----------------------------------------------------------------------------
 
 title: blank
-first_name: Senalyst
+first_name: Seyoung
 middle_name: 
-last_name:
+last_name: Nam
 email: seyoung.nam@gmail.com
 description: > # the ">" symbol means to ignore newlines until "footer_text:"
   A personal blog for software engineering and life in Seattle. Based on [*folio](https://github.com/bogoli/-folio) design.
@@ -159,6 +159,9 @@ collections:
   projects:
     output: true
     permalink: /projects/:path/
+  k8s:
+    output: true
+    permalink: /k8s/:path/
 
 news_scrollable: true # adds a vertical scroll bar if there are more than 3 news items
 news_limit: 5 # leave blank to include all the news in the `_news` folder
@@ -181,7 +184,7 @@ kramdown:
       start_line: 1
 
 # Includes & excludes
-include: ['_pages', '_k8s']
+include: ['_pages']
 exclude:
   - bin
   - Gemfile

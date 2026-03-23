@@ -1,10 +1,9 @@
 ---
 layout: distill
 title: 02 Understanding Containers and Containerized Applications
-description: description: Most content in this document is based on [Kubernetes In Action, Second Edition](https://www.manning.com/books/kubernetes-in-action-second-edition) by Marko Lukša and Kevin Conner.
+description: Most content in this document is based on "Kubernetes In Action, Second Edition" by Marko Lukša and Kevin Conner.
 giscus_comments: true
 date: 2026-03-22
-
 authors:
   - name: Seyoung Nam
     url: "https://www.linkedin.com/in/seyoungnam/"
@@ -12,8 +11,8 @@ toc:
   - name: Executive Summary
   - name: Key OS-Level Concepts & Architectural Deep Dive
     subsections:
-      - name: 2.1 The Architectural Paradigm Shift: Containers vs. Virtual Machines
-      - name: 2.3 Under the Hood: How Linux Creates the "Container" Illusion
+      - name: '2.1 The Architectural Paradigm Shift: Containers vs. Virtual Machines'
+      - name: '2.3 Under the Hood: How Linux Creates the "Container" Illusion'
       - name: 2.1.2 The Docker Platform and the Union Filesystem
   - name: Conclusion
 
@@ -135,3 +134,5 @@ While containers solve the "it works on my machine" problem by bundling dependen
 
 ## Conclusion
 Chapter 2 fundamentally redefines a container from a "lightweight VM" to its true reality: **a highly configured Linux process**. By combining Namespaces for environmental isolation, cgroups for resource metering, UnionFS for efficient storage, and advanced security profiles, the Linux kernel and container runtimes (like Docker or containerd) provide a fast, efficient, and reproducible execution environment. This deep OS-level understanding is a prerequisite for diagnosing complex networking, storage, and permission issues when deploying applications at scale with Kubernetes.
+
+

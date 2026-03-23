@@ -1,10 +1,9 @@
 ---
 layout: distill
 title: 04 Navigating the Kubernetes API and Object Model
-description: Most content in this document is based on [Kubernetes In Action, Second Edition](https://www.manning.com/books/kubernetes-in-action-second-edition) by Marko Lukša and Kevin Conner.
+description: Most content in this document is based on "Kubernetes In Action, Second Edition" by Marko Lukša and Kevin Conner.
 giscus_comments: true
 date: 2026-03-22
-
 authors:
   - name: Seyoung Nam
     url: "https://www.linkedin.com/in/seyoungnam/"
