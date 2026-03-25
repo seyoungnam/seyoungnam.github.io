@@ -22,6 +22,10 @@ d-article {
   a, p, h1, h2, h3, h4, h5, h6, li, table {
     color: var(--global-text-color) !important;
   }
+  h1 { font-size: 2.4rem; }
+  h2 { font-size: 2.1rem; }
+  h3 { font-size: 1.8rem; }
+  h4 { font-size: 1.65rem; }
   a, h1, h2, hr, table, table th, table td {
     border-bottom-color: var(--global-divider-color) !important;
   }
