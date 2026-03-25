@@ -11,14 +11,14 @@ nav_order: 6
   <ul class="post-list">
     <li>
       <h3>
-        <a class="post-title" href="/eks/01-deploy">O1 Local Env Setting and EKS Deploy</a>
+        <a class="post-title" href="/eks/01-deploy">O1 Local Environment Setting and EKS Provisioning</a>
       </h3>
     </li>
-    <!-- <li>
+    <li>
       <h3>
-        <a class="post-title" href="../../go/02-concurrency">02 Concurrency - Goroutine & Channel</a>
+        <a class="post-title" href="../eks/02-networking">02 Networking</a>
       </h3>
-    </li> -->
+    </li>
   </ul>
 </div>
 

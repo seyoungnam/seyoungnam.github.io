@@ -1,6 +1,6 @@
 ---
 layout: distill
-title: O1 Local Env Setting and EKS Deploy
+title: O1 Local Environment Setting and EKS Provisioning
 date: 2026-03-18 17:10:00
 giscus_comments: true
 description: 
