@@ -29,12 +29,18 @@ toc:
         subsections:
           - name: 3.2.1. iptables (default)
           - name: 3.2.2. IPVS (IP Virtual Server)
+      - name: 3.3. Service types
+        subsections:
+          - name: 3.3.1. ClusterIP
+          - name: 3.3.2. NodePort
+          - name: 3.3.3. LoadBalancer
+          - name: 3.3.4. ExternalName
   - name: 4. Gateway Network
 ---
 
 ## Summary
 
-This note explores how AWS EKS implements the core Kubernetes networking requirements. We start with the **Pod Network**, explaining how each Pod receives a unique IP via network namespaces and how they communicate both within and between nodes using technologies like `veth` pairs, bridges, and the AWS VPC CNI (Secondary IP and Prefix modes). We then dive into the **Service Network**, detailing how `Service` provides stable endpoints and load balancing for ephemeral Pods. Finally, we examine how `kube-proxy` realizes the Service concept through `iptables` and `IPVS` modes, highlighting their performance characteristics and implementation details within the Linux kernel.
+This note explores how AWS EKS implements core Kubernetes networking requirements. We start with the **Pod Network**, explaining how unique IPs are assigned via network namespaces and how Pods communicate using `veth` pairs, bridges, and the AWS VPC CNI. We then dive into the **Service Network**, detailing how `Service` provides stable endpoints and load balancing for ephemeral Pods through `kube-proxy` (iptables and IPVS modes). We also examine the various **Service types**—ClusterIP, NodePort, LoadBalancer, and ExternalName—and their specific use cases. Finally, we introduce the **Gateway Network**, covering how external traffic enters the cluster via Ingress, the Gateway API, and the AWS Load Balancer Controller.
 
 ## 1. Kubernetes Networking Model
 The [Services, Load Balancing, and Networking](https://kubernetes.io/docs/concepts/services-networking) page in the k8s official doc describes the following requirements for Kubernetes networking:
@@ -128,6 +134,8 @@ It operats in three primary modes:
 
 It creates `iptables` rules at `Netfilter` module in the node's **kernel** to redirect traffic destined for a `Service`'s virtual IP to one of the backend Pods. It is the default mode for k8s cluster and uses a randomized choice for load balancing. Note that `kube-proxy` is a control plane that modifies `iptables` rules at `Netfilter`. Thus, packets never hit `kube-proxy` pods located in user space, but rather gets through `Netfilter` in kernel. 
 
+{% include figure.html path="assets/img/eks/iptables.jpeg" class="img-fluid rounded z-depth-1" %}
+
 `iptables` mode has the following advantages over legacy user space mode:
 
 - **Performance**: Packets are handled entirely in kernel space by `Netfilter`, avoiding expensive context switches between kernel and user space.
@@ -139,5 +147,29 @@ However the performance would be degraded as the number of `iptables` rules gets
 #### 3.2.2. IPVS (IP Virtual Server)
 IPVS is Layer 4 load balancer working at `Netfilter`. It offers better performance for clusters with thousands of services. It supports more sophisticated load-balancing algorithms (least connection, shortest expected delay, etc.).
 
+{% include figure.html path="assets/img/eks/ipvs.jpeg" class="img-fluid rounded z-depth-1" %}
+
+Unlike `iptables` which uses a sequential list of rules ($O(N)$), IPVS uses a **Hash Table** ($O(1)$), ensuring consistent performance even as the number of services grows into the thousands.
+
+### 3.3. `Service` types
+
+#### 3.3.1. ClusterIP
+`ClusterIP` is the default type of the `Service` in the k8s cluster. It is accessible only within the same cluster. A client outside of the cluster cannot access to it.
+
+#### 3.3.2. NodePort
+`NodePort` exposes the Service on each Node's IP at a static port (the `NodePort`). You can contact the `NodePort` Service, from outside the cluster, by requesting `<NodeIP>:<NodePort>`. 
+- **Mechanism:** It builds upon `ClusterIP` by opening a specific port on all nodes.
+- **Limitation:** You are responsible for managing the node IP addresses and load balancing across them if a node goes down.
+
+#### 3.3.3. LoadBalancer
+`LoadBalancer` exposes the Service externally using a cloud provider's load balancer (e.g., AWS NLB/ALB). 
+- **Mechanism:** It automatically creates a `NodePort` and `ClusterIP` Service to which the external load balancer routes.
+- **EKS Integration:** In EKS, this typically triggers the creation of an AWS Network Load Balancer (NLB) or Classic Load Balancer (CLB) that directs traffic to the `NodePort` on your worker nodes.
+
+#### 3.3.4. ExternalName
+`ExternalName` maps a Service to a DNS name instead of a pod selector.
+- **Mechanism:** It returns a `CNAME` record with the value defined in the `externalName` field (e.g., `my.database.example.com`).
+- **Use Case:** Useful for allowing Pods to reference external services (like an RDS instance) using a local Kubernetes DNS name.
 
 ## 4. Gateway Network
+While `Service` handles connectivity and load balancing within the cluster, the **Gateway Network** (comprising the modern **Gateway API** and its predecessor, **Ingress**) defines how external traffic from the internet or a VPC enters the cluster. In EKS, this layer typically leverages the **AWS Load Balancer Controller** to provision and manage AWS Application Load Balancers (ALB) and Network Load Balancers (NLB), providing advanced routing, TLS termination, and security integration at the cluster edge.
