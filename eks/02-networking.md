@@ -1,6 +1,6 @@
 ---
 layout: distill
-title: 02 Networking
+title: 02 Networking Fundamentals
 description: 'EKS Study note'
 giscus_comments: true
 date: 2026-03-26

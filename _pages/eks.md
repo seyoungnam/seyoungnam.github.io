@@ -16,7 +16,12 @@ nav_order: 6
     </li>
     <li>
       <h3>
-        <a class="post-title" href="../eks/02-networking">02 Networking</a>
+        <a class="post-title" href="../eks/02-networking">02 Networking Fundamentals</a>
+      </h3>
+    </li>
+    <li>
+      <h3>
+        <a class="post-title" href="../eks/03-networking-lab">03 Networking Lab</a>
       </h3>
     </li>
   </ul>
