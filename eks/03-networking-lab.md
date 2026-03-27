@@ -201,7 +201,11 @@ As mentioned in [2.3.3. Cloud Native (AWS VPC CNI)](/eks/02-networking/#233-clou
 4. When the pool of secondary IP addresses is exhausted, the CNI adds another ENI to allocate more.
 
 
-The number of ENIs and IP addresses in the pool is configured through environment variables called [WARM_ENI_TARGET, WARM_IP_TARGET, MINIMUM_IP_TARGET](https://github.com/aws/amazon-vpc-cni-k8s/blob/master/docs/eni-and-ip-target.md).
+The number of ENIs and IP addresses in the pool is configured through environment variables called [WARM_ENI_TARGET, WARM_IP_TARGET, MINIMUM_IP_TARGET](https://github.com/aws/amazon-vpc-cni-k8s/blob/master/docs/eni-and-ip-target.md). Here's what each variable does:
+- `WARM_ENI_TARGET`: Specifies the number of **entire ENIs** to keep in the "warm" pool. For example, if set to 1, the CNI will always attempt to have at least one extra ENI (and all its available secondary IPs) pre-attached and ready for new Pods.
+- `WARM_IP_TARGET`: Specifies the number of **individual secondary IP addresses** to keep in the "warm" pool. It provides finer control than ENI targets, ensuring that a specific number of free IPs are always available across any attached ENIs. 
+- `MINIMUM_IP_TARGET`: Specifies the **minimum total number** of secondary IP addresses that must be present on the node at all times, regardless of how many Pods are currently running. 
+
 
 | Item | WARM_ENI_TARGET | WARM_IP_TARGET | MINIMUM_IP_TARGET |
 | :--- | :--- | :--- | :--- |
@@ -242,15 +246,15 @@ EC2 ENI IP addresses:
 ```bash
 aws ec2 describe-instances --query "Reservations[*].Instances[*].{PublicIPAdd:PublicIpAddress,PrivateIPAdd:PrivateIpAddress,InstanceName:Tags[?Key=='Name']|[0].Value,Status:State.Name}" --filters Name=instance-state-name,Values=running --output table
 
-# ------------------------------------------------------------------------
-# |                           DescribeInstances                          |
-# +-----------------------+------------------+----------------+----------+
-# |     InstanceName      |  PrivateIPAdd    |  PublicIPAdd   | Status   |
-# +-----------------------+------------------+----------------+----------+
-# |  myeks-1nd-node-group |  192.168.7.237   |  54.204.76.91  |  running |
-# |  myeks-1nd-node-group |  192.168.11.105  |  54.84.190.100 |  running |
-# |  myeks-1nd-node-group |  192.168.2.202   |  44.201.60.214 |  running |
-# +-----------------------+------------------+----------------+----------+
+------------------------------------------------------------------------
+|                           DescribeInstances                          |
++-----------------------+------------------+----------------+----------+
+|     InstanceName      |  PrivateIPAdd    |  PublicIPAdd   | Status   |
++-----------------------+------------------+----------------+----------+
+|  myeks-1nd-node-group |  192.168.7.237   |  54.204.76.91  |  running |
+|  myeks-1nd-node-group |  192.168.11.105  |  54.84.190.100 |  running |
+|  myeks-1nd-node-group |  192.168.2.202   |  44.201.60.214 |  running |
++-----------------------+------------------+----------------+----------+
 ```
 
 Set variables:
@@ -355,13 +359,244 @@ kube-system   kube-proxy-q998k           1/1     Running   0          42h   192.
 - `kube-proxy`: It manages `iptables` or `IPVS` rules directly in the host's Linux kernel to route Service traffic. To modify the host's kernel networking rules, it must run in the host's network namespace.
 CoreDNS is a standard application (a DNS server) that doesn't need to modify the underlying host's networking stack.
 
-{% include figure.html path="assets/img/eks/03-networking-lab/worker-node-network.jpeg" class="img-fluid rounded z-depth-1" %}
+{% include figure.html path="assets/img/eks/03-networking-lab/worker-node-network.jpeg" class="img-fluid rounded z-depth-1" zoomable=true %}
 
-<!-- 
+Check routes on each node:
 ```bash
-for i in $N1 $N2 $N3; do echo ">> node $i <<"; ssh ec2-user@$i sudo ip -c addr; echo; done
 for i in $N1 $N2 $N3; do echo ">> node $i <<"; ssh ec2-user@$i sudo ip -c route; echo; done
+>> node 54.204.76.91 <<
+default via 192.168.4.1 dev ens5 proto dhcp src 192.168.7.237 metric 512 
+192.168.0.2 via 192.168.4.1 dev ens5 proto dhcp src 192.168.7.237 metric 512 
+192.168.4.0/22 dev ens5 proto kernel scope link src 192.168.7.237 metric 512 
+192.168.4.1 dev ens5 proto dhcp scope link src 192.168.7.237 metric 512 
 
-ssh ec2-user@$N1 sudo iptables -t nat -S
-ssh ec2-user@$N1 sudo iptables -t nat -L -n -v
-``` -->
+>> node 54.84.190.100 <<
+default via 192.168.8.1 dev ens5 proto dhcp src 192.168.11.105 metric 512 
+192.168.0.2 via 192.168.8.1 dev ens5 proto dhcp src 192.168.11.105 metric 512 
+192.168.8.0/22 dev ens5 proto kernel scope link src 192.168.11.105 metric 512 
+192.168.8.1 dev ens5 proto dhcp scope link src 192.168.11.105 metric 512 
+192.168.8.88 dev eni19248b3518e scope link 
+
+>> node 44.201.60.214 <<
+default via 192.168.0.1 dev ens5 proto dhcp src 192.168.2.202 metric 512 
+192.168.0.0/22 dev ens5 proto kernel scope link src 192.168.2.202 metric 512 
+192.168.0.1 dev ens5 proto dhcp scope link src 192.168.2.202 metric 512 
+192.168.0.2 dev ens5 proto dhcp scope link src 192.168.2.202 metric 512 
+192.168.0.112 dev enic4269060f34 scope link 
+```
+
+IpamD debugging command to list up assigned ENIs and IPs per node:
+```bash
+for i in $N1 $N2 $N3; do echo ">> node $i <<"; ssh ec2-user@$i curl -s http://localhost:61679/v1/enis | jq; echo; done
+```
+
+### 4.3. Lab - Network Multipool Deployment
+
+#### 4.3.1. Leb Setup
+Open your terminal on each node and print the route table:
+```bash
+ssh ec2-user@$N1
+watch -d "ip link | egrep 'ens|eni' ;echo;echo "[ROUTE TABLE]"; route -n | grep eni"
+
+ssh ec2-user@$N2
+watch -d "ip link | egrep 'ens|eni' ;echo;echo "[ROUTE TABLE]"; route -n | grep eni"
+
+ssh ec2-user@$N3
+watch -d "ip link | egrep 'ens|eni' ;echo;echo "[ROUTE TABLE]"; route -n | grep eni"
+```
+
+{% include figure.html path="assets/img/eks/03-networking-lab/nodes-1.png" class="img-fluid rounded z-depth-1" zoomable=true %}
+
+Note that `192.168.8.88` is the IP for `coredns` pod in the second node and `192.168.0.112` is the IP for `coredns` pod in the third node.
+The route entry on the second node is a **Host(Node) Route** used by kernel to direct traffic to the `coredns` pod. Here is the breakdown of what each part means:
+* `192.168.8.88`: The destination IP address (`coredns`).
+* `0.0.0.0`: The Gateway. `0.0.0.0` means the destination is directly reachable on the local link; no intermediate gateway is needed.
+* `255.255.255.255`: The Genmask. This is a `/32` mask, meaning the route applies **only to this single specific IP address**.
+* `UH` (Flags):
+    * `U` (Up): The route is currently active.
+    * `H` (Host): The destination is a single host (not a whole network range).
+* `eni19248b3518e`: The specific network interface where this traffic should be sent. The AWS VPC CNI creates **a virtual interface pair for every Pod**. One end of the pair stays in the Pod's network namespace, and the other end (starting with `eni...`) stays in the host node's namespace.
+
+This route tells the node: "If you have a packet for Pod `192.168.8.88`, send it straight into the virtual interface `eni19248b3518e`." Without this route, the host wouldn't know which of its many Pod interfaces to use for that specific IP.
+
+#### 4.3.2. ENI and IPs allocated to new pods
+Let's deploy the following pods and see what happens on each node.
+```bash
+cat <<EOF | kubectl apply -f -
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: netshoot-pod
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: netshoot-pod
+  template:
+    metadata:
+      labels:
+        app: netshoot-pod
+    spec:
+      containers:
+      - name: netshoot-pod
+        image: praqma/network-multitool
+        ports:
+        - containerPort: 80
+        - containerPort: 443
+        env:
+        - name: HTTP_PORT
+          value: "80"
+        - name: HTTPS_PORT
+          value: "443"
+      terminationGracePeriodSeconds: 0
+EOF
+```
+
+{% include figure.html path="assets/img/eks/03-networking-lab/nodes-2.png" class="img-fluid rounded z-depth-1" zoomable=true %}
+With the three pods deployed, new ENIs and route entries are added across nodes. Here's what has happened on each node:
+
+- Node 1
+    - A new veth(`enia1005a298ca`) is added to the root net namespace to bridge the existing ENI(`ens5`) and `netshoot-pod`.
+    - A new ENI(`ens6`) is added to the node due to the `WARM_ENI_TARGET=1` as a new Pod being scheduled. This is an idle ENI for now.
+    - A new route entry is added to the route table to forward traffic to the `netshoot-pod` pod from ENI(`ens5`) via veth(`enia1005a298ca`).
+- Node 2
+    - A new veth(`eni7e0f35d090a`) is added to the root net namespace to bridge the existing ENI(`ens5`) and `netshoot-pod`.
+    - A new route entry is added to the route table to forward traffic to the `netshoot-pod` pod from ENI(`ens5`) via veth(`eni7e0f35d090a`).
+- Node 3
+    - A new veth(`enid3ae59596e4`) is added to the root net namespace to bridge the existing ENI(`ens5`) and `netshoot-pod`.
+    - A new route entry is added to the route table to forward traffic to the `netshoot-pod` pod from ENI(`ens5`) via veth(`enid3ae59596e4`).
+
+> To know more about veth, please refer to [2.2. Communication within a node](/eks/02-networking/#22-communication-within-a-node) section.
+
+You can confirm IP addresses appeared on new routes with the following command:
+```bash
+kubectl get pod -o=custom-columns=NAME:.metadata.name,IP:.status.podIP
+NAME                           IP
+netshoot-pod-64fbf7fb5-9zglk   192.168.4.212
+netshoot-pod-64fbf7fb5-r6vq2   192.168.2.125
+netshoot-pod-64fbf7fb5-v54t4   192.168.8.168
+```
+
+#### 4.3.3. Network Interface on Node
+
+Check network interface on the first node. 
+```bash
+ssh ec2-user@$N1
+ip -c addr
+...
+2: ens5: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 9001 qdisc mq state UP group default qlen 1000
+    link/ether 12:dc:96:8a:51:c7 brd ff:ff:ff:ff:ff:ff
+    altname enp0s5
+    inet 192.168.7.237/22 metric 512 brd 192.168.7.255 scope global dynamic ens5
+       valid_lft 3086sec preferred_lft 3086sec
+    inet6 fe80::10dc:96ff:fe8a:51c7/64 scope link proto kernel_ll 
+       valid_lft forever preferred_lft forever
+...
+```
+Note that `192.168.7.237/22` is the IP CIDR allocated to `ens5` by CNI, which `netshoot-pod` IP address(`192.168.4.212`) is included in.
+
+Check routes:
+```bash
+ip -c route
+default via 192.168.4.1 dev ens5 proto dhcp src 192.168.7.237 metric 512 
+192.168.0.2 via 192.168.4.1 dev ens5 proto dhcp src 192.168.7.237 metric 512 
+192.168.4.0/22 dev ens5 proto kernel scope link src 192.168.7.237 metric 512 
+192.168.4.1 dev ens5 proto dhcp scope link src 192.168.7.237 metric 512 
+192.168.4.212 dev enia1005a298ca scope link 
+```
+
+Here's how to read these route entries:
+- **`default via 192.168.4.1 dev ens5`**: This is the default gateway. Any traffic destined for an address not covered by more specific rules is sent to `192.168.4.1` through the physical interface `ens5`.
+- **`192.168.4.0/22 dev ens5`**: This is the **Link-Local** route for the node's subnet. It tells the kernel that any IP in the `192.168.4.0/22` range is physically connected to the same L2 network as `ens5`.
+- **`192.168.4.212 dev enia1005a298ca scope link`**: This is a **Host Route** for the Pod.
+    - `192.168.4.212`: The destination Pod's IP address.
+    - `dev enia1005a298ca`: This directs traffic into the **veth (virtual ethernet)** interface that connects the host's network namespace to the Pod's network namespace.
+    - `scope link`: Indicates the destination is directly reachable on this specific link (no intermediate gateway).
+
+Note that even though the Pod IP (`192.168.4.212`) technically falls within the node's subnet (`192.168.4.0/22`), the host route is **more specific** (/32 vs /22), so the kernel correctly prioritizes sending the traffic through the veth pair instead of out the physical ENI.
+
+## 5. Communication Between Pods on Different Nodes
+
+The goal of the following test is to confirm the direct pod-to-pod communication across nodes **without IP address overlay or NAT**.
+
+Variables setup:
+```bash
+PODNAME1=$(kubectl get pod -l app=netshoot-pod -o jsonpath='{.items[0].metadata.name}')
+PODNAME2=$(kubectl get pod -l app=netshoot-pod -o jsonpath='{.items[1].metadata.name}')
+PODNAME3=$(kubectl get pod -l app=netshoot-pod -o jsonpath='{.items[2].metadata.name}')
+echo $PODNAME1 $PODNAME2 $PODNAME3
+netshoot-pod-64fbf7fb5-9zglk netshoot-pod-64fbf7fb5-v54t4 netshoot-pod-64fbf7fb5-r6vq2
+
+
+PODIP1=$(kubectl get pod -l app=netshoot-pod -o jsonpath='{.items[0].status.podIP}')
+PODIP2=$(kubectl get pod -l app=netshoot-pod -o jsonpath='{.items[1].status.podIP}')
+PODIP3=$(kubectl get pod -l app=netshoot-pod -o jsonpath='{.items[2].status.podIP}')
+echo $PODIP1 $PODIP2 $PODIP3
+192.168.4.212 192.168.8.168 192.168.2.125
+
+# send ping from pod1 to pod2
+kubectl exec -it $PODNAME1 -- ping -c 2 $PODIP2
+# send ping from pod2 to pod3
+kubectl exec -it $PODNAME2 -- ping -c 2 $PODIP3
+# send ping from pod3 to pod1
+kubectl exec -it $PODNAME3 -- ping -c 2 $PODIP1
+
+# http
+kubectl exec -it $PODNAME1 -- curl -s http://$PODIP2
+# https
+kubectl exec -it $PODNAME1 -- curl -sk https://$PODIP2
+```
+
+Open your terminal on node 1 and 2 and set it ready to capture ping(`icmp`) packets:
+```bash
+ssh ec2-user@$N1
+sudo tcpdump -i any -nn icmp
+
+ssh ec2-user@$N2
+sudo tcpdump -i any -nn icmp
+```
+
+Send ping from pod1 to pod2:
+```bash
+kubectl exec -it $PODNAME1 -- ping -c 2 $PODIP2
+```
+
+Terminals for node 1 and 2 would print `icmp` packets:
+
+{% include figure.html path="assets/img/eks/03-networking-lab/icmp.png" class="img-fluid rounded z-depth-1" zoomable=true %}
+
+As you can see above, both source and destination IP addresses do not change when packets go in and out of the ENIs. Only IP addresses we can find are `netshoot-pod` pod IP addresses(`192.168.4.212` and `192.168.8.168`), indicating that packets are not overlayed or NATed.
+
+Let's set two nodes' terminal to monitor packets on ENIs(`ens5`):
+```bash
+sudo tcpdump -i ens5 -nn icmp
+```
+
+Send ping again from pod1 to pod2:
+```bash
+kubectl exec -it $PODNAME1 -- ping -c 2 $PODIP2
+```
+
+{% include figure.html path="assets/img/eks/03-networking-lab/icmp-2.png" class="img-fluid rounded z-depth-1" zoomable=true %}
+
+Again, only `netshoot-pod` pod IP addresses appear on the terminal. Physical node IP addresses do not appear.
+
+## 6. Communication from Pod to External Host
+When a pod call to the external host, the outbound packet is SNATed on the network interface(`ens5`).
+
+Send ping from pod1 to google.com:
+```bash
+kubectl exec -it $PODNAME1 -- ping -c 1 www.google.com
+```
+
+{% include figure.html path="assets/img/eks/03-networking-lab/icmp-3.png" class="img-fluid rounded z-depth-1" zoomable=true %}
+The source IP address(`192.168.4.212`) is changed to the node IP(`192.168.7.237`) by SNAT on the network interface(`ens5`) in the first node.
+
+Confirm `192.168.7.237` is the node IP address:
+```bash
+kubecttl get node
+NAME                             STATUS   ROLES    AGE    VERSION
+ip-192-168-11-105.ec2.internal   Ready    <none>   2d1h   v1.34.4-eks-f69f56f
+ip-192-168-2-202.ec2.internal    Ready    <none>   2d1h   v1.34.4-eks-f69f56f
+ip-192-168-7-237.ec2.internal    Ready    <none>   2d1h   v1.34.4-eks-f69f56f
+```
