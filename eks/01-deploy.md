@@ -3,8 +3,13 @@ layout: distill
 title: O1 Local Environment Setting and EKS Provisioning
 date: 2026-03-18 17:10:00
 giscus_comments: true
-description: 
-tags: 
+description: 'This page is the personal study note and codebase written during the EKS group study led by Jongho S.'
+authors:
+  - name: Seyoung Nam
+    url: "https://www.linkedin.com/in/seyoungnam/"
+  - name: Jongho S.
+    url: "https://www.linkedin.com/in/gasida99/"
+tags: eks kubernetes terraform aws
 toc:
   - name: 1. Local Environment Configurations
   - name: 2. Deploy EKS via Terraform Resources

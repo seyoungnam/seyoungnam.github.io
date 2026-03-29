@@ -1,12 +1,14 @@
 ---
 layout: distill
 title: 02 Networking Fundamentals
-description: 'EKS Study note'
+description: 'This page is the personal study note and codebase written during the EKS group study led by Jongho S.'
 giscus_comments: true
 date: 2026-03-26
 authors:
   - name: Seyoung Nam
     url: "https://www.linkedin.com/in/seyoungnam/"
+  - name: Jongho S.
+    url: "https://www.linkedin.com/in/gasida99/"
 toc:
   - name: Summary
   - name: 1. Kubernetes Networking Model

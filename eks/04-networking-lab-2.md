@@ -1,17 +1,25 @@
 ---
 layout: distill
 title: '04 EKS Networking Lab: Scaling Pod IPs with VPC CNI'
-description: 'EKS Study note'
+description: 'This page is the personal study note and codebase written during the EKS group study led by Jongho S.'
 giscus_comments: true
 date: 2026-03-26
 authors:
   - name: Seyoung Nam
     url: "https://www.linkedin.com/in/seyoungnam/"
+  - name: Jongho S.
+    url: "https://www.linkedin.com/in/gasida99/"
 toc:
-
+  - name: 1. AWS VPC CNI Configuration Change
+  - name: 2. Pod Count Constraints on Node
+    subsections:
+      - name: 2.1. Pod Count Constraints for t3.medium Instance Type
+      - name: 2.2. Pod Count Constraints for Other Instance Type
+      - name: 2.3. Lab - Deploy max pods (Default ENI-based)
+      - name: 2.4. Lab - Deploy max pods (managed node group enforcement)
 ---
 
-> This lab is the continuation of 03 EKS Networking Lab 1. You need to provision an EKS cluster by following the instruction in the lab 1. 
+> This lab is the continuation of **03 EKS Networking Lab: Routing and Interfaces**. You need to provision an EKS cluster by following the instruction described [here](/eks/03-networking-lab.md).
 
 
 ## 1. AWS VPC CNI Configuration Change

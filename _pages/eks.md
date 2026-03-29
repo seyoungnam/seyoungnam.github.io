@@ -31,7 +31,7 @@ nav_order: 6
     </li>
     <li>
       <h3>
-        <a class="post-title" href="../eks/05-networking-lab-3">05 EKS Networking Lab: AWS Load Balancer Controller & NLB</a>
+        <a class="post-title" href="../eks/05-networking-lab-3">05 EKS Networking Lab: AWS LBC, Ingress, and Gateway API</a>
       </h3>
     </li>
   </ul>
