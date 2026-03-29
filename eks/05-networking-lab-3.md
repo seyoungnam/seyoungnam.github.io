@@ -160,6 +160,7 @@ Keyword is **error in fetching vpc id through ec2 metadata**. To allow AWS LBC t
 First, configure params for `helm install`
 - `-set region=region-code`
 - `-set vpcId=vpc-xxxxxxxx`
+
 ```bash
 # get vpc id
 terraform state show 'module.vpc.aws_vpc.this[0]'
@@ -181,6 +182,7 @@ Make sure the hop limit is changed for every instances.
 {% include figure.html path="assets/img/eks/05-networking-lab-3/iam-role.png" class="img-fluid rounded z-depth-1" zoomable=true %}
 
 Restart aws-load-balancer-controller and check pod status again:
+
 ```bash
 kubectl rollout restart -n kube-system deploy aws-load-balancer-controller
 
