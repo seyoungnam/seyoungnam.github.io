@@ -1,0 +1,742 @@
+<!DOCTYPE html> <html> <head> <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"> <meta charset="utf-8"> <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no"> <meta http-equiv="X-UA-Compatible" content="IE=edge"> <title>O1 Local Environment Setting and EKS Provisioning | Seyoung Nam</title> <meta name="author" content="Seyoung Nam"> <meta name="description" content="This page is the personal study note and codebase written during the EKS group study led by Jongho S."> <meta name="keywords" content="jekyll, jekyll-theme, academic-website, portfolio-website"> <link href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.1/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha256-DF7Zhf293AJxJNTmh5zhoYYIMs2oXitRfBjY+9L//AY=" crossorigin="anonymous"> <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/mdbootstrap@4.20.0/css/mdb.min.css" integrity="sha256-jpjYvU3G3N6nrrBwXJoVEYI/0zw8htfFnhT9ljN3JJw=" crossorigin="anonymous"> <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@5.15.4/css/all.min.css" integrity="sha256-mUZM63G8m73Mcidfrv5E+Y61y7a12O5mW4ezU3bxqW4=" crossorigin="anonymous"> <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/academicons@1.9.1/css/academicons.min.css" integrity="sha256-i1+4qU2G2860dGGIOJscdC30s9beBXjFfzjWLjBRsBg=" crossorigin="anonymous"> <link rel="stylesheet" type="text/css" href="https://fonts.googleapis.com/css?family=Roboto:300,400,500,700|Roboto+Slab:100,300,400,500,700|Material+Icons"> <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/jwarby/jekyll-pygments-themes@master/github.css" media="" id="highlight_theme_light"> <link rel="shortcut icon" href="data:image/svg+xml,&lt;svg%20xmlns=%22http://www.w3.org/2000/svg%22%20viewBox=%220%200%20100%20100%22&gt;&lt;text%20y=%22.9em%22%20font-size=%2290%22&gt;%E2%9A%9B%EF%B8%8F&lt;/text&gt;&lt;/svg&gt;"> <link rel="stylesheet" href="/assets/css/main.css"> <link rel="canonical" href="https://seyoungnam.github.io/eks/01-deploy/"> <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/jwarby/jekyll-pygments-themes@master/native.css" media="none" id="highlight_theme_dark"> <script src="/assets/js/theme.js"></script> <script src="/assets/js/dark_mode.js"></script> <script src="https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js" integrity="sha256-/xUj+3OJU5yExlq6GSYGSHk7tPXikynS7ogEvDej/m4=" crossorigin="anonymous"></script> <script type="text/javascript">window.MathJax={tex:{tags:"ams"}};</script> <script defer type="text/javascript" id="MathJax-script" src="https://cdn.jsdelivr.net/npm/mathjax@3.2.0/es5/tex-mml-chtml.js"></script> <script defer src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script> <script src="/assets/js/distillpub/template.v2.js"></script> <script src="/assets/js/distillpub/transforms.v2.js"></script> <script src="/assets/js/distillpub/overrides.js"></script> </head> <body> <d-front-matter> <script async type="text/json">{
+      "title": "O1 Local Environment Setting and EKS Provisioning",
+      "description": "This page is the personal study note and codebase written during the EKS group study led by Jongho S.",
+      "published": "March 18, 2026",
+      "authors": [
+        {
+          "author": "Seyoung Nam",
+          "authorURL": "https://www.linkedin.com/in/seyoungnam/",
+          "affiliations": [
+            {
+              "name": "",
+              "url": ""
+            }
+          ]
+        },
+        {
+          "author": "Jongho S.",
+          "authorURL": "https://www.linkedin.com/in/gasida99/",
+          "affiliations": [
+            {
+              "name": "",
+              "url": ""
+            }
+          ]
+        }
+        
+      ],
+      "katex": {
+        "delimiters": [
+          {
+            "left": "$",
+            "right": "$",
+            "display": false
+          },
+          {
+            "left": "$$",
+            "right": "$$",
+            "display": true
+          }
+        ]
+      }
+    }</script> </d-front-matter> <header> <nav id="navbar" class="navbar navbar-light navbar-expand-sm fixed-top"> <div class="container"> <a class="navbar-brand title font-weight-lighter" href="/"><span class="font-weight-bold">Seyoung </span>Nam</a> <button class="navbar-toggler collapsed ml-auto" type="button" data-toggle="collapse" data-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation"> <span class="sr-only">Toggle navigation</span> <span class="icon-bar top-bar"></span> <span class="icon-bar middle-bar"></span> <span class="icon-bar bottom-bar"></span> </button> <div class="collapse navbar-collapse text-right" id="navbarNav"> <ul class="navbar-nav ml-auto flex-nowrap"> <li class="nav-item "> <a class="nav-link" href="/">about</a> </li> <li class="nav-item "> <a class="nav-link" href="/blog/">blog</a> </li> <li class="nav-item dropdown "> <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">technology</a> <div class="dropdown-menu dropdown-menu-right" aria-labelledby="navbarDropdown"> <a class="dropdown-item" href="/go/">Golang</a> <div class="dropdown-divider"></div> <a class="dropdown-item" href="/k8s/">Kubernetes</a> <div class="dropdown-divider"></div> <a class="dropdown-item" href="/istio/">Istio</a> <div class="dropdown-divider"></div> <a class="dropdown-item" href="/eks/">EKS</a> <div class="dropdown-divider"></div> <a class="dropdown-item" href="/network/">Network</a> </div> </li> <li class="nav-item dropdown "> <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">algorithms</a> <div class="dropdown-menu dropdown-menu-right" aria-labelledby="navbarDropdown"> <a class="dropdown-item" href="/leetcode/">LeetCode</a> <div class="dropdown-divider"></div> <a class="dropdown-item" href="/algoexpert/">AlgoExpert</a> </div> </li> <li class="nav-item "> <a class="nav-link" href="/projects/">projects</a> </li> <li class="nav-item "> <a class="nav-link" href="/repositories/">repositories</a> </li> <li class="toggle-container"> <button id="light-toggle" title="Change theme"> <i class="fas fa-moon"></i> <i class="fas fa-sun"></i> </button> </li> </ul> </div> </div> </nav> <progress id="progress" value="0"> <div class="progress-container"> <span class="progress-bar"></span> </div> </progress> </header> <div class="post distill"> <d-title> <h1>O1 Local Environment Setting and EKS Provisioning</h1> <p>This page is the personal study note and codebase written during the EKS group study led by Jongho S.</p> </d-title> <d-byline></d-byline> <d-article> <d-contents> <nav class="l-text figcaption"> <h3>Contents</h3> <div><a href="#1-local-environment-configurations">1. Local Environment Configurations</a></div> <div><a href="#2-deploy-eks-via-terraform-resources">2. Deploy EKS via Terraform Resources</a></div> <div><a href="#3-browse-eks-cluster-info">3. Browse EKS Cluster Info</a></div> <div><a href="#4-worker-nodes-info">4. Worker Nodes Info</a></div> <ul> <li><a href="#ssh-to-worker-nodes">ssh to worker nodes</a></li> <li><a href="#worker-node-specs">Worker Node Specs</a></li> <li><a href="#host-hardware-os-and-kernel">Host Hardware, OS, and Kernel</a></li> <li><a href="#selinux-configurations">SELinux Configurations</a></li> <li><a href="#swap-space">Swap Space</a></li> <li><a href="#cgroup-version">Cgroup Version</a></li> <li><a href="#overlay">Overlay</a></li> <li><a href="#containerd-snapshot-list">Containerd snapshot list</a></li> <li><a href="#sysctl-kernel-networking-params">sysctl kernel networking params</a></li> <li><a href="#time-sync">Time sync</a></li> <li><a href="#containers">Containers</a></li> <li><a href="#containerd">Containerd</a></li> <li><a href="#cni">CNI</a></li> <li><a href="#network-configurations">Network Configurations</a></li> <li><a href="#storage">Storage</a></li> <li><a href="#cgroup-configurations">Cgroup Configurations</a></li> </ul> </nav> </d-contents> <h1 id="summary">Summary</h1> <p>This guide provides a comprehensive walkthrough for setting up a local development environment, provisioning an <code class="language-plaintext highlighter-rouge">Amazon EKS (Elastic Kubernetes Service)</code> cluster using <code class="language-plaintext highlighter-rouge">Terraform</code>, and performing deep-dive inspections of the cluster components. You will learn how to configure essential CLI tools, deploy scalable infrastructure as code, and explore the low-level details of worker nodes, including containerd runtimes, CNI networking, and Kubelet configurations.</p> <h1 id="1-local-environment-configurations">1. Local Environment Configurations</h1> <p>Install AWS CLI and configure IAM in your local environment using the below commands:</p> <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># install aws cli</span>
+brew <span class="nb">install </span>awscli
+aws <span class="nt">--version</span>
+
+<span class="c"># configure IAM on local env</span>
+aws configure
+AWS Access Key ID : <span class="o">{</span>your access key<span class="o">}</span>
+AWS Secret Access Key : <span class="o">{</span>your secret key<span class="o">}</span>
+Default region name : us-east-1
+
+<span class="c"># confirm</span>
+aws sts get-caller-identity
+</code></pre></div></div> <p>(Optional) If you want to create a EC2 key pair via AWS CLI, follow the commands:</p> <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># create a key pair</span>
+aws ec2 create-key-pair <span class="se">\</span>
+  <span class="nt">--key-name</span> my-keypair <span class="se">\</span>
+  <span class="nt">--query</span> <span class="s1">'KeyMaterial'</span> <span class="se">\</span>
+  <span class="nt">--output</span> text <span class="o">&gt;</span> my-keypair.pem
+
+<span class="c"># change access permission for the key pair</span>
+<span class="nb">chmod </span>400 my-keypair.pem
+
+<span class="c"># confirm</span>
+aws ec2 describe-key-pairs <span class="nt">--key-names</span> my-keypair
+</code></pre></div></div> <p>Install required tools to configure k8s</p> <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># Install kubectl</span>
+brew <span class="nb">install </span>kubernetes-cli
+kubectl version <span class="nt">--client</span><span class="o">=</span><span class="nb">true</span>
+
+<span class="c"># Install Helm</span>
+brew <span class="nb">install </span>helm
+helm version
+</code></pre></div></div> <p>Install recommended tools</p> <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># Install krew</span>
+brew <span class="nb">install </span>krew
+
+<span class="c"># Install k9s</span>
+brew <span class="nb">install </span>k9s
+
+<span class="c"># Install kube-ps1</span>
+brew <span class="nb">install </span>kube-ps1
+
+<span class="c"># Install kubectx</span>
+brew <span class="nb">install </span>kubectx
+
+
+<span class="c"># install kubecolor</span>
+brew <span class="nb">install </span>kubecolor
+<span class="nb">echo</span> <span class="s2">"alias k=kubectl"</span> <span class="o">&gt;&gt;</span> ~/.zshrc
+<span class="nb">echo</span> <span class="s2">"alias kubectl=kubecolor"</span> <span class="o">&gt;&gt;</span> ~/.zshrc
+<span class="nb">echo</span> <span class="s2">"compdef kubecolor=kubectl"</span> <span class="o">&gt;&gt;</span> ~/.zshrc
+
+<span class="c"># add k8s krew path to PATH</span>
+<span class="nb">export </span><span class="nv">PATH</span><span class="o">=</span><span class="s2">"</span><span class="k">${</span><span class="nv">KREW_ROOT</span><span class="k">:-</span><span class="nv">$HOME</span><span class="p">/.krew</span><span class="k">}</span><span class="s2">/bin:</span><span class="nv">$PATH</span><span class="s2">"</span>
+</code></pre></div></div> <p>Install Terraform</p> <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># install tfenv</span>
+brew <span class="nb">install </span>tfenv
+
+<span class="c"># check the tf versions to install</span>
+tfenv list-remote
+
+<span class="c"># install the selected tf version</span>
+tfenv <span class="nb">install </span>1.14.6
+
+<span class="c"># declare the tf version to use</span>
+tfenv use 1.14.6
+
+<span class="c"># check installed tf versions</span>
+tfenv list
+
+<span class="c"># check the tf version info</span>
+terraform version
+
+<span class="c"># configure auto complete</span>
+terraform <span class="nt">-install-autocomplete</span>
+
+<span class="c">## add the following command to .zshrc</span>
+<span class="nb">cat</span> ~/.zshrc
+autoload <span class="nt">-U</span> +X bashcompinit <span class="o">&amp;&amp;</span> bashcompinit
+<span class="nb">complete</span> <span class="nt">-o</span> nospace <span class="nt">-C</span> /usr/local/bin/terraform terraform
+</code></pre></div></div> <p><br></p> <h1 id="2-deploy-eks-via-terraform-resources">2. Deploy EKS via Terraform Resources</h1> <p>Pull Terraform resources from repo:</p> <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># pull code</span>
+git clone https://github.com/gasida/aews.git
+<span class="nb">cd </span>aews
+tree aews
+
+<span class="c"># move into 1w directory</span>
+<span class="nb">cd </span>1w
+</code></pre></div></div> <blockquote> <p><strong>Note that you should change default value for <code class="language-plaintext highlighter-rouge">TargetRegion</code> and <code class="language-plaintext highlighter-rouge">availability_zones</code> to meet your needs. The default value is set to <code class="language-plaintext highlighter-rouge">ap-northeast-2</code>.</strong></p> </blockquote> <p>Deploy EKS:</p> <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># donfigure tf vars</span>
+aws ec2 describe-key-pairs <span class="nt">--query</span> <span class="s2">"KeyPairs[].KeyName"</span> <span class="nt">--output</span> text
+<span class="nb">export </span><span class="nv">TF_VAR_KeyName</span><span class="o">=</span><span class="si">$(</span>aws ec2 describe-key-pairs <span class="nt">--query</span> <span class="s2">"KeyPairs[].KeyName"</span> <span class="nt">--output</span> text<span class="si">)</span>
+<span class="nb">export </span><span class="nv">TF_VAR_ssh_access_cidr</span><span class="o">=</span><span class="si">$(</span>curl <span class="nt">-s</span> ipinfo.io/ip<span class="si">)</span>/32 <span class="c"># ipinfo.io/ip returns your NAT Gateway IP</span>
+<span class="nb">echo</span> <span class="nv">$TF_VAR_KeyName</span> <span class="nv">$TF_VAR_ssh_access_cidr</span> <span class="c"># they override KeyName and ssh_access_cidr vars defined in var.tf</span>
+
+<span class="c"># deploy EKS, take ~12 mins</span>
+terraform init
+terraform plan
+<span class="nb">nohup </span>sh <span class="nt">-c</span> <span class="s2">"terraform apply -auto-approve"</span> <span class="o">&gt;</span> create.log 2&gt;&amp;1 &amp;
+<span class="nb">tail</span> <span class="nt">-f</span> create.log
+
+
+<span class="c"># update ~/.kube/config</span>
+aws eks update-kubeconfig <span class="nt">--region</span> us-east-1 <span class="nt">--name</span> myeks
+
+<span class="c"># confirm k8s config and rename context</span>
+<span class="nb">cat</span> ~/.kube/config
+<span class="nb">cat</span> ~/.kube/config | <span class="nb">grep </span>current-context | <span class="nb">awk</span> <span class="s1">'{print $2}'</span>
+kubectl config rename-context <span class="si">$(</span><span class="nb">cat</span> ~/.kube/config | <span class="nb">grep </span>current-context | <span class="nb">awk</span> <span class="s1">'{print $2}'</span><span class="si">)</span> myeks
+<span class="nb">cat</span> ~/.kube/config | <span class="nb">grep </span>current-context
+
+</code></pre></div></div> <p><br></p> <h1 id="3-browse-eks-cluster-info">3. Browse EKS Cluster Info</h1> <p>Control Plane:</p> <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># check eks cluster info</span>
+kubectl cluster-info
+
+<span class="c"># check endpoint</span>
+<span class="nv">CLUSTER_NAME</span><span class="o">=</span>myeks
+aws eks describe-cluster <span class="nt">--name</span> <span class="nv">$CLUSTER_NAME</span> | jq
+...
+      <span class="s2">"endpointPublicAccess"</span>: <span class="nb">true</span>,
+      <span class="s2">"endpointPrivateAccess"</span>: <span class="nb">false</span>,
+      <span class="s2">"publicAccessCidrs"</span>: <span class="o">[</span>
+        <span class="s2">"0.0.0.0/0"</span>
+       ...
+
+aws eks describe-cluster <span class="nt">--name</span> <span class="nv">$CLUSTER_NAME</span> | jq <span class="nt">-r</span> .cluster.endpoint
+
+<span class="c">## dig dns</span>
+<span class="nv">APIDNS</span><span class="o">=</span><span class="si">$(</span>aws eks describe-cluster <span class="nt">--name</span> <span class="nv">$CLUSTER_NAME</span> | jq <span class="nt">-r</span> .cluster.endpoint | <span class="nb">cut</span> <span class="nt">-d</span> <span class="s1">'/'</span> <span class="nt">-f</span> 3<span class="si">)</span>
+dig +short <span class="nv">$APIDNS</span>
+
+curl <span class="nt">-s</span> ipinfo.io/13.125.96.102
+<span class="s2">"org"</span>: <span class="s2">"AS16509 Amazon.com, Inc."</span>
+...
+
+<span class="c"># check eks node group info</span>
+aws eks describe-nodegroup <span class="nt">--cluster-name</span> <span class="nv">$CLUSTER_NAME</span> <span class="nt">--nodegroup-name</span> <span class="nv">$CLUSTER_NAME</span><span class="nt">-node-group</span> | jq
+...
+    <span class="s2">"capacityType"</span>: <span class="s2">"ON_DEMAND"</span>,
+    <span class="s2">"scalingConfig"</span>: <span class="o">{</span>
+      <span class="s2">"minSize"</span>: 1,
+      <span class="s2">"maxSize"</span>: 4,
+      <span class="s2">"desiredSize"</span>: 2
+    <span class="o">}</span>,
+    <span class="s2">"instanceTypes"</span>: <span class="o">[</span>
+      <span class="s2">"t3.medium"</span>
+    <span class="o">]</span>,
+   ...
+    <span class="s2">"amiType"</span>: <span class="s2">"AL2023_x86_64_STANDARD"</span>,
+   ...
+
+<span class="c"># check node info: os and container runtime</span>
+kubectl get node <span class="nt">--label-columns</span><span class="o">=</span>node.kubernetes.io/instance-type,eks.amazonaws.com/capacityType,topology.kubernetes.io/zone
+kubectl get node <span class="nt">--label-columns</span><span class="o">=</span>node.kubernetes.io/instance-type
+kubectl get node <span class="nt">--label-columns</span><span class="o">=</span>eks.amazonaws.com/capacityType <span class="c"># check node's capacityType</span>
+kubectl get node
+kubectl get node <span class="nt">-owide</span>
+
+
+<span class="c"># check auth info</span>
+kubectl get node <span class="nt">-v</span><span class="o">=</span>6
+I0318 15:38:15.124533   42277 loader.go:405] Config loaded from file:  /Users/clicknam/.kube/config
+...
+I0318 15:38:16.750759   42277 round_trippers.go:632] <span class="s2">"Response"</span> <span class="nv">verb</span><span class="o">=</span><span class="s2">"GET"</span> <span class="nv">url</span><span class="o">=</span><span class="s2">"https://A901F3A598F3C8673DC12A5E6B70093A.gr7.us-east-1.eks.amazonaws.com/api/v1/nodes?limit=500"</span> <span class="nv">status</span><span class="o">=</span><span class="s2">"200 OK"</span> <span class="nv">milliseconds</span><span class="o">=</span>1596
+...
+
+<span class="nb">cat</span> ~/.kube/config
+kubectl config view
+
+
+<span class="c">## Get a token for authentication with an Amazon EKS cluster</span>
+<span class="nv">AWS_DEFAULT_REGION</span><span class="o">=</span>us-east-1
+aws eks get-token <span class="nb">help
+</span>aws eks get-token <span class="nt">--cluster-name</span> <span class="nv">$CLUSTER_NAME</span> <span class="nt">--region</span> <span class="nv">$AWS_DEFAULT_REGION</span> | jq
+</code></pre></div></div> <p>System pods:</p> <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>
+kubectl get pod <span class="nt">-n</span> kube-system
+kubectl get pod <span class="nt">-n</span> kube-system <span class="nt">-o</span> wide
+kubectl get pod <span class="nt">-A</span>
+
+
+<span class="c"># check all resources in kube-system</span>
+kubectl get deploy,ds,pod,cm,secret,svc,ep,endpointslice,pdb,sa,role,rolebinding <span class="nt">-n</span> kube-system
+
+<span class="c"># check images for each pods</span>
+kubectl get pods <span class="nt">--all-namespaces</span> <span class="nt">-o</span> <span class="nv">jsonpath</span><span class="o">=</span><span class="s2">"{.items[*].spec.containers[*].image}"</span> | <span class="nb">tr</span> <span class="nt">-s</span> <span class="s1">'[[:space:]]'</span> <span class="s1">'\n'</span> | <span class="nb">sort</span> | <span class="nb">uniq</span> <span class="nt">-c</span>
+
+
+<span class="c"># kube-proxy : iptables mode, bind 0.0.0.0, conntrack</span>
+kubectl describe pod <span class="nt">-n</span> kube-system <span class="nt">-l</span> k8s-app<span class="o">=</span>kube-proxy
+kubectl get cm <span class="nt">-n</span> kube-system kube-proxy <span class="nt">-o</span> yaml
+kubectl get cm <span class="nt">-n</span> kube-system kube-proxy-config <span class="nt">-o</span> yaml
+
+
+<span class="c"># coredns </span>
+kubectl describe pod <span class="nt">-n</span> kube-system <span class="nt">-l</span> k8s-app<span class="o">=</span>kube-dns
+kubectl get cm <span class="nt">-n</span> kube-system coredns <span class="nt">-o</span> yaml
+kubectl get pdb <span class="nt">-n</span> kube-system coredns <span class="nt">-o</span> <span class="nv">jsonpath</span><span class="o">=</span><span class="s1">'{.spec}'</span> | jq
+
+
+<span class="c"># aws-node: aws-node(cni plugin), aws-eks-nodeagent(network policy agent)</span>
+kubectl describe pod <span class="nt">-n</span> kube-system <span class="nt">-l</span> k8s-app<span class="o">=</span>aws-node
+</code></pre></div></div> <p>Addons info:</p> <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># check the list of addons</span>
+aws eks list-addons <span class="nt">--cluster-name</span> myeks | jq
+<span class="o">{</span>
+    <span class="s2">"addons"</span>: <span class="o">[</span>
+        <span class="s2">"coredns"</span>,
+        <span class="s2">"kube-proxy"</span>,
+        <span class="s2">"vpc-cni"</span>
+    <span class="o">]</span>
+<span class="o">}</span>
+
+<span class="c"># check detailed info for a given addon</span>
+aws eks describe-addon <span class="nt">--cluster-name</span> myeks <span class="nt">--addon-name</span> vpc-cni | jq
+
+<span class="c"># check detaild info for all addons</span>
+aws eks list-addons <span class="nt">--cluster-name</span> myeks <span class="se">\</span>
+| jq <span class="nt">-r</span> <span class="s1">'.addons[]'</span> <span class="se">\</span>
+| xargs <span class="nt">-I</span><span class="o">{}</span> aws eks describe-addon <span class="se">\</span>
+     <span class="nt">--cluster-name</span> myeks <span class="se">\</span>
+     <span class="nt">--addon-name</span> <span class="o">{}</span>
+</code></pre></div></div> <p><br></p> <h1 id="4-worker-nodes-info">4. Worker Nodes Info</h1> <h2 id="ssh-to-worker-nodes">ssh to worker nodes</h2> <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># check node public IP and assign vars</span>
+aws ec2 describe-instances <span class="nt">--query</span> <span class="s2">"Reservations[*].Instances[*].{PublicIPAdd:PublicIpAddress,PrivateIPAdd:PrivateIpAddress,InstanceName:Tags[?Key=='Name']|[0].Value,Status:State.Name}"</span> <span class="nt">--filters</span> <span class="nv">Name</span><span class="o">=</span>instance-state-name,Values<span class="o">=</span>running <span class="nt">--output</span> table
+<span class="nv">NODE1</span><span class="o">=</span>13.124.172.105
+<span class="nv">NODE2</span><span class="o">=</span>15.164.250.203
+
+<span class="c"># ping to node IP</span>
+ping <span class="nt">-c</span> 1 <span class="nv">$NODE1</span>
+ping <span class="nt">-c</span> 1 <span class="nv">$NODE2</span>
+
+<span class="c"># check node security group</span>
+aws ec2 describe-security-groups | jq
+aws ec2 describe-security-groups <span class="nt">--filters</span> <span class="s2">"Name=tag:Name,Values=myeks-node-group-sg"</span> | jq
+aws ec2 describe-security-groups <span class="nt">--filters</span> <span class="s2">"Name=tag:Name,Values=myeks-node-group-sg"</span> <span class="nt">--query</span> <span class="s1">'SecurityGroups[*].IpPermissions'</span> <span class="nt">--output</span> text
+
+
+<span class="c"># ssh to worker node</span>
+ssh <span class="nt">-i</span> ~/.ssh/id_rsa <span class="nt">-o</span> <span class="nv">StrictHostKeyChecking</span><span class="o">=</span>no ec2-user@<span class="nv">$NODE1</span> <span class="nb">hostname
+</span>ssh <span class="nt">-i</span> ~/.ssh/id_rsa <span class="nt">-o</span> <span class="nv">StrictHostKeyChecking</span><span class="o">=</span>no ec2-user@<span class="nv">$NODE2</span> <span class="nb">hostname
+</span>ssh <span class="nt">-o</span> <span class="nv">StrictHostKeyChecking</span><span class="o">=</span>no ec2-user@<span class="nv">$NODE1</span> <span class="nb">hostname
+</span>ssh <span class="nt">-o</span> <span class="nv">StrictHostKeyChecking</span><span class="o">=</span>no ec2-user@<span class="nv">$NODE2</span> <span class="nb">hostname</span>
+
+
+<span class="c"># Tip. ssh config</span>
+<span class="nb">cat</span> ~/.ssh/config       
+...
+Host <span class="k">*</span>
+    User ec2-user
+    IdentityFile ~/.ssh/keypair.pem
+    
+ssh ec2-user@<span class="nv">$NODE1</span>
+<span class="nb">exit
+
+</span>ssh ec2-user@<span class="nv">$NODE2</span>
+<span class="nb">exit</span>
+</code></pre></div></div> <h2 id="worker-node-specs">Worker Node Specs</h2> <p>A worker node should meet the minimum spec requirements to account not just for your application’s requirements, but also for the overhead of Kubernetes system components (<code class="language-plaintext highlighter-rouge">kubelet</code>, container runtime) and AWS-specific DaemonSets (like the VPC CNI, kube-proxy, and CoreDNS). Let’s look around the current worker node specs.</p> <p>First, switch to root user account:</p> <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">sudo </span>su - 
+<span class="nb">whoami</span>
+</code></pre></div></div> <h3 id="host-hardware-os-and-kernel">Host Hardware, OS, and Kernel</h3> <p>The <code class="language-plaintext highlighter-rouge">hostnamectl</code> command provides a snapshot of the node’s system and hardware configuration. The Static hostname (<code class="language-plaintext highlighter-rouge">ip-192-168-2-27.ec2.internal</code>) acts as the node’s unique identifier within the Kubernetes cluster. This node is running Amazon Linux 2023 with a modern 6.12 Kernel, which provides native support for <code class="language-plaintext highlighter-rouge">cgroup v2</code> and <code class="language-plaintext highlighter-rouge">eBPF</code>—essential features for modern container resource management and advanced networking. Finally, the <code class="language-plaintext highlighter-rouge">t3.medium</code> hardware model confirms the instance has 2 vCPU and 4 GB of RAM, satisfying the practical minimum requirements to comfortably run Kubernetes system components alongside your workloads.</p> <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>hostnamectl
+ Static <span class="nb">hostname</span>: ip-192-168-2-27.ec2.internal
+       Icon name: computer-vm
+         Chassis: vm 🖴
+      Machine ID: ec2e166b60f2e04c0cdc1f8c30c171fa
+         Boot ID: 64bbb6075c4a41bd90f809a4da1c3748
+  Virtualization: amazon
+Operating System: Amazon Linux 2023.10.20260216
+     CPE OS Name: cpe:2.3:o:amazon:amazon_linux:2023
+          Kernel: Linux 6.12.68-92.122.amzn2023.x86_64
+    Architecture: x86-64
+ Hardware Vendor: Amazon EC2
+  Hardware Model: t3.medium
+Firmware Version: 1.0
+</code></pre></div></div> <h3 id="selinux-configuraitons">SELinux Configuraitons</h3> <p>The outputs from the <code class="language-plaintext highlighter-rouge">getenforce</code> and <code class="language-plaintext highlighter-rouge">sestatus</code> commands confirm that SELinux is enabled but operating in Permissive mode. Kubernetes recommends this configuration for worker nodes for the following reasons:</p> <ul> <li> <strong>Unrestricted Host Interaction</strong>: Containers frequently need to interact with the host filesystem—such as when configuring pod networking or mounting storage volumes. Strict SELinux policies can inadvertently block these essential operations.</li> <li> <strong>Kubelet Stability</strong>: If SELinux is set to <code class="language-plaintext highlighter-rouge">Enforcing</code> mode, the <code class="language-plaintext highlighter-rouge">kubelet</code> may encounter permission-denied errors when attempting to access the system resources required to provision and manage the container lifecycle.</li> <li> <strong>Auditable Troubleshooting</strong>: In <code class="language-plaintext highlighter-rouge">Permissive</code> mode, SELinux continues to monitor access and log policy violations, but it does not actively block the actions. This ensures smooth cluster operation while still providing administrators with valuable audit logs for troubleshooting and security analysis.</li> </ul> <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>getenforce
+Permissive
+
+sestatus
+SELinux status:                 enabled
+SELinuxfs mount:                /sys/fs/selinux
+SELinux root directory:         /etc/selinux
+Loaded policy name:             targeted
+Current mode:                   permissive
+Mode from config file:          permissive
+Policy MLS status:              enabled
+Policy deny_unknown status:     allowed
+Memory protection checking:     actual <span class="o">(</span>secure<span class="o">)</span>
+Max kernel policy version:      33
+</code></pre></div></div> <h3 id="swap-space">Swap Space</h3> <p>Swap space is a designated portion of a computer’s physical storage drive (like an HDD or SSD) that the operating system uses as an extension of its physical RAM, when the RAM gets nearly full. The <code class="language-plaintext highlighter-rouge">free -h</code> and <code class="language-plaintext highlighter-rouge">cat /etc/fstab</code> commands confirm that swap space is completely disabled (<code class="language-plaintext highlighter-rouge">0B</code>) and will not be remounted upon reboot. Historically, the kubelet requires swap to be disabled to ensure predictable memory allocation; if a node runs out of memory, Kubernetes needs to accurately trigger Pod evictions rather than allowing the OS to silently swap memory to disk, which severely degrades performance.</p> <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>free <span class="nt">-h</span>
+               total        used        free      shared  buff/cache   available
+Mem:           3.7Gi       343Mi       2.2Gi       1.0Mi       1.2Gi       3.2Gi
+Swap:             0B          0B          0B
+
+
+<span class="nb">cat</span> /etc/fstab
+<span class="c">#</span>
+<span class="nv">UUID</span><span class="o">=</span>417dd49c-6f90-4edd-8517-c87dc5543f08     /           xfs    defaults,noatime  1   1
+<span class="nv">UUID</span><span class="o">=</span>C42B-1BC6        /boot/efi       vfat    defaults,noatime,uid<span class="o">=</span>0,gid<span class="o">=</span>0,umask<span class="o">=</span>0077,shortname<span class="o">=</span>winnt,x-systemd.automount 0 2
+</code></pre></div></div> <h3 id="cgroup-version">Cgroup Version</h3> <p>the <code class="language-plaintext highlighter-rouge">stat</code> command checks the filesystem type for cgroups. The output <code class="language-plaintext highlighter-rouge">cgroup2fs</code> confirms the node is running cgroup v2. Kubernetes uses cgroups to enforce CPU and memory limits on containers, and cgroup v2 is the modern, unified standard required by recent Kubernetes releases for improved resource isolation and management.</p> <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># check cgroup: version 2</span>
+<span class="nb">stat</span> <span class="nt">-fc</span> %T /sys/fs/cgroup/
+cgroup2fs <span class="c"># tmpfs if v1</span>
+</code></pre></div></div> <h3 id="overlay">Overlay</h3> <p>Confirm <code class="language-plaintext highlighter-rouge">overlay</code> kernel module is loaded. OverlayFS is a type of “union mount” filesystem, which allows you to take two different directories from different underlying filesystems and merge them together so they appear as a single, unified directory tree. It is arguably most famous for being <strong>the underlying storage technology that powers modern container runtimes like Docker, containerd, and Kubernetes</strong>.</p> <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># check overlay kernel module load. For more info: https://interlude-3.tistory.com/47</span>
+lsmod | <span class="nb">grep </span>overlay
+overlay               217088  7
+</code></pre></div></div> <h3 id="containerd-snapshot-list">Containerd snapshot list</h3> <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>ctr <span class="nt">-n</span> k8s.io snapshots <span class="nb">ls
+ls</span> <span class="nt">-la</span> /var/lib/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/
+tree /var/lib/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/ <span class="nt">-L</span> 3
+</code></pre></div></div> <h3 id="sysctl-kernal-networking-params">sysctl kernal networking params</h3> <p>The commands check the sysctl kernel parameters on the node, highlighting three critical configurations required for Kubernetes networking:</p> <ul> <li> <code class="language-plaintext highlighter-rouge">net.ipv4.ip_forward = 1</code>: Enables IP forwarding. This turns the node into a router, allowing it to forward packets coming from the container network out to the external internet or other VPC subnets.</li> <li> <code class="language-plaintext highlighter-rouge">net.bridge.bridge-nf-call-iptables = 1</code>: Ensures that IPv4 traffic crossing network bridge interfaces is passed to the host’s <code class="language-plaintext highlighter-rouge">iptables</code> for filtering and NAT. This is mandatory for <code class="language-plaintext highlighter-rouge">kube-proxy</code> to successfully route traffic to Kubernetes Services.</li> <li> <code class="language-plaintext highlighter-rouge">net.bridge.bridge-nf-call-ip6tables = 1</code>: Does the exact same thing as above, but for IPv6 network traffic, ensuring compatibility for dual-stack or IPv6-only clusters.</li> </ul> <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># check kernel params</span>
+tree /etc/sysctl.d/
+<span class="nb">cat</span> /etc/sysctl.d/00-defaults.conf
+<span class="nb">cat</span> /etc/sysctl.d/99-sysctl.conf
+<span class="nb">cat</span> /etc/sysctl.d/99-amazon.conf 
+<span class="nb">cat</span> /etc/sysctl.d/99-kubernetes-cri.conf
+net.bridge.bridge-nf-call-ip6tables <span class="o">=</span> 1
+net.bridge.bridge-nf-call-iptables <span class="o">=</span> 1
+net.ipv4.ip_forward <span class="o">=</span> 1
+</code></pre></div></div> <h3 id="time-sync">Time sync</h3> <p>Time must be perfectly synced across all nodes in a cluster. These commands verify the chrony configuration and confirm the node is actively receiving time data from AWS’s internal NTP(Network Time Protocol) servers.</p> <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># check configs</span>
+<span class="nb">grep</span> <span class="s2">"^[^#]"</span> /etc/chrony.conf
+tree /run/chrony.d/
+/run/chrony.d/
+├── amazon-pool.sources -&gt; /usr/share/amazon-chrony-config/amazon-pool_aws.sources
+└── link-local-ipv4.sources -&gt; /usr/share/amazon-chrony-config/link-local-ipv4_unspecified.sources
+
+<span class="c"># check time server pool</span>
+<span class="nb">cat</span> /usr/share/amazon-chrony-config/link-local-ipv4_unspecified.sources
+<span class="c"># https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/set-time.html</span>
+server 169.254.169.123 prefer iburst minpoll 4 maxpoll 4
+
+<span class="nb">cat</span> /usr/share/amazon-chrony-config/amazon-pool_aws.sources
+<span class="c"># Use Amazon Public NTP leap-second smearing time sources</span>
+<span class="c"># https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/set-time.html#configure-time-sync</span>
+pool time.aws.com iburst
+
+nslookup time.aws.com
+
+
+<span class="c"># check status</span>
+timedatectl status
+
+chronyc sources <span class="nt">-v</span>
+MS Name/IP address         Stratum Poll Reach LastRx Last sample               
+<span class="o">===============================================================================</span>
+^<span class="k">*</span> 169.254.169.123               3   4   377    13   <span class="nt">-424ns</span><span class="o">[</span>  <span class="nt">-11us</span><span class="o">]</span> +/-  427us
+...
+</code></pre></div></div> <h3 id="containers">Containers</h3> <p><img src="https://iximiuz.com/containerd-command-line-clients/containerd-command-line-clients-2000-opt.png" alt="crictl" style="width: 75%; max-width: 800px; height: auto;"></p> <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># check basic info</span>
+nerdctl info
+...
+Server:
+ Server Version: 2.1.5
+ Storage Driver: overlayfs
+ Logging Driver: json-file
+ Cgroup Driver: systemd
+ Cgroup Version: 2
+ Plugins:
+  Log:     fluentd journald json-file none syslog
+  Storage: native overlayfs
+ ...
+ 
+<span class="c"># check running containers</span>
+nerdctl ps
+CONTAINER ID    IMAGE                                                                                             COMMAND                   CREATED         STATUS    PORTS    NAMES
+9625f7e51edb    602401143452.dkr.ecr.us-east-1.amazonaws.com/eks/coredns:v1.13.2-eksbuild.3                       <span class="s2">"/coredns -conf /etc…"</span>    16 hours ago    Up                 k8s://kube-system/coredns-6d58b7d47c-7dwws/coredns
+cd919f7b35d5    602401143452.dkr.ecr.us-east-1.amazonaws.com/eks/kube-proxy:v1.34.5-eksbuild.2                    <span class="s2">"kube-proxy --v=2 --…"</span>    16 hours ago    Up                 k8s://kube-system/kube-proxy-5x6gl/kube-proxy
+bdac8651c34c    602401143452.dkr.ecr.us-west-2.amazonaws.com/eks/pause:3.10                                       <span class="s2">"/pause"</span>                  16 hours ago    Up                 k8s://kube-system/coredns-6d58b7d47c-7dwws
+35489bb2cfea    602401143452.dkr.ecr.us-west-2.amazonaws.com/eks/pause:3.10                                       <span class="s2">"/pause"</span>                  16 hours ago    Up                 k8s://kube-system/kube-proxy-5x6gl
+965d94c4c075    602401143452.dkr.ecr.us-east-1.amazonaws.com/amazon/aws-network-policy-agent:v1.3.1-eksbuild.1    <span class="s2">"/controller --enabl…"</span>    16 hours ago    Up                 k8s://kube-system/aws-node-4hmcx/aws-eks-nodeagent
+b94c7a6a9eb6    602401143452.dkr.ecr.us-east-1.amazonaws.com/amazon-k8s-cni:v1.21.1-eksbuild.5                    <span class="s2">"/app/aws-vpc-cni"</span>        16 hours ago    Up                 k8s://kube-system/aws-node-4hmcx/aws-node
+addd1c5666d7    602401143452.dkr.ecr.us-west-2.amazonaws.com/eks/pause:3.10                                       <span class="s2">"/pause"</span>                  16 hours ago    Up                 k8s://kube-system/aws-node-4hmcx                                                                                               
+
+nerdctl images
+nerdctl images | <span class="nb">grep </span>localhost
+localhost/kubernetes/pause                                                      latest                76040a49ba6f    2 weeks ago     linux/amd64    737.3kB    318kB
+localhost/kubernetes/pause                                                      latest                76040a49ba6f    2 weeks ago     linux/arm64    0B         265.6kB
+</code></pre></div></div> <h3 id="containerd">Containerd</h3> <p><img src="https://iximiuz.com/containerd-command-line-clients/docker-and-kubernetes-use-containerd-2000-opt.png" alt="containerd" style="width: 75%; max-width: 800px; height: auto;"></p> <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># check process</span>
+pstree <span class="nt">-a</span>
+systemctl status containerd <span class="nt">--no-pager</span> <span class="nt">-l</span>
+● containerd.service - containerd container runtime
+     Loaded: loaded <span class="o">(</span>/usr/lib/systemd/system/containerd.service<span class="p">;</span> disabled<span class="p">;</span> preset: disabled<span class="o">)</span>
+    Drop-In: /etc/systemd/system/containerd.service.d
+             └─00-runtime-slice.conf
+
+<span class="nb">cat</span> /usr/lib/systemd/system/containerd.service
+<span class="o">[</span>Service]
+<span class="nv">ExecStartPre</span><span class="o">=</span>-/sbin/modprobe overlay
+...
+<span class="nv">LimitNOFILE</span><span class="o">=</span>infinity
+
+<span class="c"># check containerd config files</span>
+tree /etc/containerd/
+/etc/containerd/
+├── base-runtime-spec.json
+└── config.toml
+
+<span class="c"># check daemon configs</span>
+<span class="nb">cat</span> /etc/containerd/config.toml
+version <span class="o">=</span> 3
+root <span class="o">=</span> <span class="s2">"/var/lib/containerd"</span>
+state <span class="o">=</span> <span class="s2">"/run/containerd"</span>
+
+<span class="o">[</span>grpc]
+address <span class="o">=</span> <span class="s2">"/run/containerd/containerd.sock"</span>
+
+<span class="o">[</span>plugins.<span class="s1">'io.containerd.cri.v1.images'</span><span class="o">]</span>
+discard_unpacked_layers <span class="o">=</span> <span class="nb">true</span>
+
+<span class="o">[</span>plugins.<span class="s1">'io.containerd.cri.v1.images'</span>.pinned_images]
+sandbox <span class="o">=</span> <span class="s2">"localhost/kubernetes/pause"</span>
+
+<span class="o">[</span>plugins.<span class="s2">"io.containerd.cri.v1.images"</span>.registry]
+config_path <span class="o">=</span> <span class="s2">"/etc/containerd/certs.d:/etc/docker/certs.d"</span>
+
+<span class="o">[</span>plugins.<span class="s1">'io.containerd.cri.v1.runtime'</span><span class="o">]</span>
+enable_cdi <span class="o">=</span> <span class="nb">true</span>
+
+<span class="o">[</span>plugins.<span class="s1">'io.containerd.cri.v1.runtime'</span>.containerd]
+default_runtime_name <span class="o">=</span> <span class="s2">"runc"</span>
+
+<span class="o">[</span>plugins.<span class="s1">'io.containerd.cri.v1.runtime'</span>.containerd.runtimes.runc]
+runtime_type <span class="o">=</span> <span class="s2">"io.containerd.runc.v2"</span>
+base_runtime_spec <span class="o">=</span> <span class="s2">"/etc/containerd/base-runtime-spec.json"</span>
+
+<span class="o">[</span>plugins.<span class="s1">'io.containerd.cri.v1.runtime'</span>.containerd.runtimes.runc.options]
+BinaryName <span class="o">=</span> <span class="s2">"/usr/sbin/runc"</span>
+SystemdCgroup <span class="o">=</span> <span class="nb">true</span>
+
+<span class="o">[</span>plugins.<span class="s1">'io.containerd.cri.v1.runtime'</span>.cni]
+bin_dir <span class="o">=</span> <span class="s2">"/opt/cni/bin"</span>
+conf_dir <span class="o">=</span> <span class="s2">"/etc/cni/net.d"</span>
+
+
+<span class="c"># check OCI runtime spec</span>
+<span class="nb">cat</span> /etc/containerd/base-runtime-spec.json  | jq
+...
+    <span class="s2">"namespaces"</span>: <span class="o">[</span>
+      <span class="o">{</span>
+        <span class="s2">"type"</span>: <span class="s2">"ipc"</span>
+      <span class="o">}</span>,
+      <span class="o">{</span>
+        <span class="s2">"type"</span>: <span class="s2">"mount"</span>
+      <span class="o">}</span>,
+      <span class="o">{</span>
+        <span class="s2">"type"</span>: <span class="s2">"network"</span>
+      <span class="o">}</span>,
+      <span class="o">{</span>
+        <span class="s2">"type"</span>: <span class="s2">"pid"</span>
+      <span class="o">}</span>,
+      <span class="o">{</span>
+        <span class="s2">"type"</span>: <span class="s2">"uts"</span>
+      <span class="o">}</span>
+    <span class="o">]</span>,
+    ...
+<span class="s2">"process"</span>: <span class="o">{</span>
+    ...
+    <span class="s2">"cwd"</span>: <span class="s2">"/"</span>,               <span class="c"># default working directory for container process</span>
+    <span class="s2">"noNewPrivileges"</span>: <span class="nb">true</span>,  <span class="c"># block container process from getting more power: setuid binaries stop working</span>
+    <span class="s2">"rlimits"</span>: <span class="o">[</span>
+      <span class="o">{</span>
+        <span class="s2">"type"</span>: <span class="s2">"RLIMIT_NOFILE"</span>, <span class="c"># limit file descriptor: default → 65536 , max → 1048576</span>
+        <span class="s2">"soft"</span>: 65536,
+        <span class="s2">"hard"</span>: 1048576
+      <span class="o">}</span>
+    <span class="o">]</span>,
+    <span class="s2">"user"</span>: <span class="o">{</span>                 <span class="c"># default user for container process</span>
+      <span class="s2">"gid"</span>: 0,
+      <span class="s2">"uid"</span>: 0
+    <span class="o">}</span>
+...
+
+<span class="c"># check unix domain socket for containerd: used by kubelt, also used by containerd clients(ctr, nerdctr, crictl)</span>
+containerd config dump | <span class="nb">grep</span> <span class="nt">-n</span> containerd.sock
+<span class="nb">ls</span> <span class="nt">-l</span> /run/containerd/containerd.sock
+ss <span class="nt">-xl</span> | <span class="nb">grep </span>containerd
+ss <span class="nt">-xnp</span> | <span class="nb">grep </span>containerd
+
+<span class="c"># check plugins</span>
+ctr <span class="nt">--address</span> /run/containerd/containerd.sock version
+ctr plugins <span class="nb">ls
+</span>TYPE                                      ID                       PLATFORMS         STATUS    
+io.containerd.content.v1                  content                  -                 ok     <span class="c"># store image layer</span>
+...
+io.containerd.snapshotter.v1              native                   linux/arm64/v8    ok        
+io.containerd.snapshotter.v1              overlayfs                linux/arm64/v8    ok     <span class="c"># k8s default snapshotter</span>
+io.containerd.snapshotter.v1              zfs                      linux/arm64/v8    skip      
+...   
+io.containerd.metadata.v1                 bolt                     -                 ok     <span class="c"># metadata DB (bolt)</span>
+</code></pre></div></div> <p>Check Kubelet Info:</p> <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># check process</span>
+ps afxuwww
+systemctl status kubelet <span class="nt">--no-pager</span>
+<span class="nb">cat</span> /etc/systemd/system/kubelet.service
+
+<span class="c"># check files</span>
+tree /etc/kubernetes/
+/etc/kubernetes/
+├── kubelet
+│   ├── config.json
+│   └── config.json.d
+│       └── 40-nodeadm.conf
+├── manifests               <span class="c"># no static pod</span>
+└── pki
+    └── ca.crt
+
+<span class="c"># check k8s CA cert: valid for 10 years</span>
+<span class="nb">cat</span> /etc/kubernetes/pki/ca.crt | openssl x509 <span class="nt">-text</span> <span class="nt">-noout</span>
+        Issuer: <span class="nv">CN</span><span class="o">=</span>kubernetes
+        Validity
+            Not Before: Mar 18 03:45:51 2026 GMT
+            Not After : Mar 15 03:50:51 2036 GMT
+        Subject: <span class="nv">CN</span><span class="o">=</span>kubernetes
+
+<span class="c"># check kubelet config files</span>
+<span class="nb">cat</span> /etc/kubernetes/kubelet/config.json | jq
+...
+  <span class="s2">"cgroupDriver"</span>: <span class="s2">"systemd"</span>,
+  <span class="s2">"cgroupRoot"</span>: <span class="s2">"/"</span>,              <span class="c"># every k8s pod cgroup is created under this path</span>
+  ...
+  <span class="s2">"evictionHard"</span>: <span class="o">{</span>               <span class="c"># pod eviction conditions</span>
+    <span class="s2">"memory.available"</span>: <span class="s2">"100Mi"</span>,
+    <span class="s2">"nodefs.available"</span>: <span class="s2">"10%"</span>,
+    <span class="s2">"nodefs.inodesFree"</span>: <span class="s2">"5%"</span>
+  <span class="o">}</span>,
+  <span class="s2">"featureGates"</span>: <span class="o">{</span>
+    <span class="s2">"DynamicResourceAllocation"</span>: <span class="nb">true</span>,      <span class="c"># GPU / device plugin resource allocation</span>
+    <span class="s2">"MutableCSINodeAllocatableCount"</span>: <span class="nb">true</span>, <span class="c"># dynamically adjusted CSI volume attach limit</span>
+    <span class="s2">"RotateKubeletServerCertificate"</span>: <span class="nb">true</span>  <span class="c"># kubelet TLS cert auto rotation</span>
+  <span class="o">}</span>,
+  ...
+  <span class="s2">"kubeReservedCgroup"</span>: <span class="s2">"/runtime"</span>,
+  <span class="s2">"logging"</span>: <span class="o">{</span>
+    <span class="s2">"verbosity"</span>: 2
+  <span class="o">}</span>,
+  <span class="s2">"maxPods"</span>: 17,                  <span class="c"># determined by ENI + IP count</span>
+  <span class="s2">"protectKernelDefaults"</span>: <span class="nb">true</span>,  <span class="c"># kubelet is not allowed to change node sysctl</span>
+  <span class="s2">"providerID"</span>: <span class="s2">"aws:///us-east-1b/i-0bef257dedc4486c6"</span>, <span class="c"># k8s node ↔ AWS instance mapping</span>
+  <span class="s2">"readOnlyPort"</span>: 0,              <span class="c"># 10255 read-only</span>
+  ...
+  <span class="s2">"serializeImagePulls"</span>: <span class="nb">false</span>,   <span class="c"># increse pull image speed</span>
+  <span class="s2">"serverTLSBootstrap"</span>: <span class="nb">true</span>,     <span class="c"># kube-apiserver auto issues kubelet TLS cert</span>
+   ...
+  <span class="s2">"systemReservedCgroup"</span>: <span class="s2">"/system"</span>,
+
+
+<span class="nb">cat</span> /etc/kubernetes/kubelet/config.json.d/40-nodeadm.conf
+<span class="o">{</span>
+    <span class="s2">"apiVersion"</span>: <span class="s2">"kubelet.config.k8s.io/v1beta1"</span>,
+    <span class="s2">"clusterDNS"</span>: <span class="o">[</span>
+        <span class="s2">"10.100.0.10"</span>
+    <span class="o">]</span>,
+    <span class="s2">"kind"</span>: <span class="s2">"KubeletConfiguration"</span>,
+    <span class="s2">"maxPods"</span>: 17
+
+<span class="c"># check kubelet directory</span>
+tree /var/lib/kubelet <span class="nt">-L</span> 2
+/var/lib/kubelet
+├── actuated_pods_state
+├── allocated_pods_state
+├── checkpoints
+├── cpu_manager_state
+├── device-plugins
+│   └── kubelet.sock
+├── dra_manager_state
+├── kubeconfig
+├── memory_manager_state
+├── pki
+│   ├── kubelet-server-2026-03-18-03-55-31.pem
+│   └── kubelet-server-current.pem -&gt; /var/lib/kubelet/pki/kubelet-server-2026-03-18-03-55-31.pem
+├── plugins
+├── plugins_registry
+├── pod-resources
+│   └── kubelet.sock
+└── pods
+    ├── 64bbf315-5068-4caa-87a1-522b81fe939a
+    ├── 830110f9-1d7e-4dd2-b20e-50fdfec55643
+    └── bd2e6ef1-0c49-4ef7-835d-6dfc9e585be0
+
+<span class="c"># kubelet(client) calls eks api server</span>
+<span class="nb">cat</span> /var/lib/kubelet/kubeconfig 
+<span class="nt">---</span>
+apiVersion: v1
+kind: Config
+clusters:
+  - name: kubernetes
+    cluster:
+      certificate-authority: /etc/kubernetes/pki/ca.crt
+      server: https://A901F3A598F3C8673DC12A5E6B70093A.gr7.us-east-1.eks.amazonaws.com
+current-context: kubelet
+contexts:
+  - name: kubelet
+    context:
+      cluster: kubernetes
+      user: kubelet
+<span class="nb">users</span>:
+  - name: kubelet
+    user:
+      <span class="nb">exec</span>:
+        apiVersion: client.authentication.k8s.io/v1beta1
+        <span class="nb">command</span>: aws
+        args:
+          - <span class="s2">"eks"</span>
+          - <span class="s2">"get-token"</span>
+          - <span class="s2">"--cluster-name"</span>
+          - <span class="s2">"myeks"</span>
+          - <span class="s2">"--region"</span>
+          - <span class="s2">"us-east-1"</span>
+
+<span class="c"># TLS cert used when eks api server calls to kubelet</span>
+<span class="nb">cat</span> /var/lib/kubelet/pki/kubelet-server-current.pem | openssl x509 <span class="nt">-text</span> <span class="nt">-noout</span>
+Certificate:
+    Data:
+        Version: 3 <span class="o">(</span>0x2<span class="o">)</span>
+        Serial Number:
+            24:04:e9:3e:c0:5b:62:e2:eb:2b:5c:cf:88:0f:a3:2f:df:fd:cd:3b
+        Signature Algorithm: sha256WithRSAEncryption
+        Issuer: <span class="nv">CN</span><span class="o">=</span>kubernetes
+        Validity
+            Not Before: Mar 18 03:51:00 2026 GMT
+            Not After : May  2 03:51:00 2026 GMT
+        Subject: <span class="nv">O</span><span class="o">=</span>system:nodes, <span class="nv">CN</span><span class="o">=</span>system:node:ip-192-168-2-27.ec2.internal
+        Subject Public Key Info:
+            Public Key Algorithm: id-ecPublicKey
+                Public-Key: <span class="o">(</span>256 bit<span class="o">)</span>
+                pub:
+                    04:b8:4e:89:fb:2e:f5:56:e8:a3:8f:fb:b0:48:b1:
+                    79:14:75:73:3d:fc:b7:97:48:58:d1:ec:47:29:6b:
+                    9f:d7:5a:5e:c5:de:7d:db:06:e9:94:83:8b:a5:c9:
+                    d8:37:b2:79:5b:db:53:bd:a7:97:77:5d:a8:37:90:
+                    4b:d1:c3:37:39
+                ASN1 OID: prime256v1
+                NIST CURVE: P-256
+        X509v3 extensions:
+            X509v3 Key Usage: critical
+                Digital Signature
+            X509v3 Extended Key Usage: 
+                TLS Web Server Authentication
+            X509v3 Basic Constraints: critical
+                CA:FALSE
+            X509v3 Subject Key Identifier: 
+                DA:79:8B:56:C3:7B:C8:61:2D:78:1B:F0:A8:06:79:A9:17:34:C0:4C
+            X509v3 Authority Key Identifier: 
+                82:73:7D:37:AB:F7:BD:99:57:05:EE:64:47:E9:C6:0B:7F:28:9C:01
+            X509v3 Subject Alternative Name: 
+                DNS:ec2-18-206-231-198.compute-1.amazonaws.com, DNS:ip-192-168-2-27.ec2.internal, IP Address:18.206.231.198, IP Address:192.168.2.27
+    Signature Algorithm: sha256WithRSAEncryption
+    Signature Value:
+        d2:e5:dd:77:82:aa:ac:a5:67:2f:ba:5d:6e:cf:50:2c:e8:74:
+        fd:27:71:a5:61:2e:93:80:0c:ec:4f:22:79:2c:af:3d:6a:b6:
+        c8:5d:f6:40:de:91:76:98:db:2e:48:e0:d0:6e:44:24:25:40:
+        13:a8:fc:cc:a8:2a:f0:87:4e:3f:c7:4c:1d:e6:a4:55:b6:a6:
+        ce:25:58:36:0f:b3:f7:52:15:82:0a:6d:53:0c:8e:83:45:af:
+        b0:7b:6b:54:74:f3:e6:85:0c:07:49:62:5b:d4:1e:ad:b7:2d:
+        ad:1a:4b:93:c7:d5:22:94:b2:df:89:b8:4d:c0:f5:33:7f:a7:
+        b4:2b:36:6e:39:92:75:ae:dd:27:ac:33:92:e4:07:b7:38:54:
+        ba:c9:fe:52:de:65:aa:9b:f4:1a:08:93:2a:30:ba:52:85:4b:
+        6f:56:ac:40:ed:a9:a1:3e:52:b7:a9:23:8f:2e:b8:b7:a2:69:
+        10:7c:a8:d2:2d:64:b8:51:0b:ef:27:6c:ed:cf:bc:9e:0b:13:
+        10:4a:9e:a3:49:db:79:4f:ac:d7:49:86:0c:1f:ac:31:e3:55:
+        04:96:4e:c2:ea:c4:95:7a:97:81:f0:4e:5c:ac:b5:2a:f6:3f:
+        b0:e2:be:86:48:fa:50:86:bd:04:eb:cf:46:fc:6a:72:f4:20:
+        8e:34:3f:70
+
+<span class="c"># checkcsr used to issue cert</span>
+kubectl get csr
+</code></pre></div></div> <h3 id="cni">CNI</h3> <p>Below commands verify the installation and configuration of the AWS VPC CNI plugin on the worker node. The binaries required to set up pod networking are located in <code class="language-plaintext highlighter-rouge">/opt/cni/bin/</code>, while the configuration file (<code class="language-plaintext highlighter-rouge">/etc/cni/net.d/10-aws.conflist</code>) acts as the instruction manual, telling the container runtime exactly how to assign AWS VPC IP addresses to newly created pods.</p> <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># check cni binary</span>
+tree <span class="nt">-pug</span> /opt/cni/
+/opt/cni/bin/aws-cni <span class="nt">-h</span>
+<span class="nb">cat</span> /opt/cni/bin/aws-cni-support.sh
+
+<span class="c"># check aws vpc cni plugin config</span>
+tree /etc/cni
+/etc/cni
+└── net.d
+    └── 10-aws.conflist
+
+<span class="nb">cat</span> /etc/cni/net.d/10-aws.conflist | jq
+</code></pre></div></div> <h3 id="network-configurations">Network Configurations</h3> <p>Inspect the low-level networking, routing, and firewall configurations on a worker node.</p> <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># check network config</span>
+ip route
+ip addr <span class="c"># check eni and veth</span>
+lsns <span class="nt">-t</span> net
+
+<span class="c"># check iptables rules</span>
+iptables <span class="nt">-t</span> nat <span class="nt">-S</span>
+iptables <span class="nt">-t</span> filter <span class="nt">-S</span>
+iptables <span class="nt">-t</span> mangle <span class="nt">-S</span>
+</code></pre></div></div> <h3 id="storage">Storage</h3> <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>lsblk
+<span class="nb">df</span> <span class="nt">-hT</span>
+findmnt
+</code></pre></div></div> <h3 id="cgroup-configurations">Cgroup Configurations</h3> <ul> <li> <code class="language-plaintext highlighter-rouge">cgroup Version Validation</code>: stat and findmnt confirm the system is utilizing cgroup v2, the modern Linux standard for resource management.</li> <li> <code class="language-plaintext highlighter-rouge">Resource Hierarchy</code>: The tree output illustrates the node’s resource slices. The kubelet carefully divides resources between the operating system (<code class="language-plaintext highlighter-rouge">system.slice</code>), Kubernetes overhead (<code class="language-plaintext highlighter-rouge">runtime.slice</code>), and your workloads (<code class="language-plaintext highlighter-rouge">kubepods.slice</code>).</li> <li> <code class="language-plaintext highlighter-rouge">Monitoring</code>: Tools like <code class="language-plaintext highlighter-rouge">systemd-cgls</code> and <code class="language-plaintext highlighter-rouge">systemd-cgtop</code> allow administrators to visualize and monitor the resource consumption of these specific control groups dynamically.</li> </ul> <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># check cgroup: version 2</span>
+<span class="nb">stat</span> <span class="nt">-fc</span> %T /sys/fs/cgroup/
+findmnt |grep <span class="nt">-i</span> cgroup
+
+<span class="c"># EKS node cgroup structure</span>
+tree /sys/fs/cgroup/ <span class="nt">-L</span> 1
+...
+/sys/fs/cgroup/
+├─ system.slice                 ← systemReservedCgroup
+│   ├─ sshd
+│   ├─ journald
+│   └─ systemd
+│
+├─ runtime.slice                ← kubeReservedCgroup
+│   ├─ kubelet
+│   ├─ containerd
+│   └─ kube-proxy
+│
+└─ kubepods.slice               ← pods
+     ├─ guaranteed
+     ├─ burstable
+     └─ besteffort
+
+<span class="c"># associated tools</span>
+systemd-cgls
+systemd-cgtop
+</code></pre></div></div> </d-article> <d-appendix> <d-footnote-list></d-footnote-list> <d-citation-list></d-citation-list> </d-appendix> <d-bibliography src="/assets/bibliography/"></d-bibliography><div id="giscus_thread" style="max-width: 800px; margin: 0 auto;"> <script>let giscusTheme=localStorage.getItem("theme"),giscusAttributes={src:"https://giscus.app/client.js","data-repo":"alshedivat/al-folio","data-repo-id":"MDEwOlJlcG9zaXRvcnk2MDAyNDM2NQ==","data-category":"Comments","data-category-id":"DIC_kwDOA5PmLc4CTBt6","data-mapping":"title","data-strict":"1","data-reactions-enabled":"1","data-emit-metadata":"0","data-input-position":"bottom","data-theme":giscusTheme,"data-lang":"en",crossorigin:"anonymous",async:""},giscusScript=document.createElement("script");Object.entries(giscusAttributes).forEach(([t,a])=>giscusScript.setAttribute(t,a)),document.getElementById("giscus_thread").appendChild(giscusScript);</script> <noscript>Please enable JavaScript to view the <a href="http://giscus.app/?ref_noscript" rel="external nofollow noopener" target="_blank">comments powered by giscus.</a> </noscript> </div> </div> <footer class="fixed-bottom"> <div class="container mt-0"> © Copyright 2026 Seyoung Nam. Powered by <a href="https://jekyllrb.com/" target="_blank" rel="external nofollow noopener">Jekyll</a> with <a href="https://github.com/alshedivat/al-folio" rel="external nofollow noopener" target="_blank">al-folio</a> theme. Hosted by <a href="https://pages.github.com/" target="_blank" rel="external nofollow noopener">GitHub Pages</a>. Photos from <a href="https://unsplash.com" target="_blank" rel="external nofollow noopener">Unsplash</a>. </div> </footer> <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.1/dist/js/bootstrap.bundle.min.js" integrity="sha256-fgLAgv7fyCGopR/gBNq2iW3ZKIdqIcyshnUULC4vex8=" crossorigin="anonymous"></script> <script src="https://cdn.jsdelivr.net/npm/mdbootstrap@4.20.0/js/mdb.min.js" integrity="sha256-NdbiivsvWt7VYCt6hYNT3h/th9vSTL4EDWeGs5SN3DA=" crossorigin="anonymous"></script> <script defer type="text/javascript" src="https://cdn.jsdelivr.net/npm/mermaid@10.9.1/dist/mermaid.min.js"></script> <script>document.addEventListener("DOMContentLoaded",function(){document.querySelectorAll("pre code.language-mermaid").forEach(function(e){let t=e.parentElement,n=document.createElement("div");n.classList.add("mermaid"),n.textContent=e.textContent,t.parentElement.replaceChild(n,t)}),mermaid.initialize({startOnLoad:!0,theme:"dark"===document.documentElement.getAttribute("data-theme")?"dark":"default"})});</script> <script defer src="https://cdn.jsdelivr.net/npm/medium-zoom@1.0.6/dist/medium-zoom.min.js" integrity="sha256-EdPgYcPk/IIrw7FYeuJQexva49pVRZNmt3LculEr7zM=" crossorigin="anonymous"></script> <script defer src="/assets/js/zoom.js"></script> <script defer src="/assets/js/common.js"></script> <script type="text/javascript">function progressBarSetup(){"max"in document.createElement("progress")?(initializeProgressElement(),$(document).on("scroll",function(){progressBar.attr({value:getCurrentScrollPosition()})}),$(window).on("resize",initializeProgressElement)):(resizeProgressBar(),$(document).on("scroll",resizeProgressBar),$(window).on("resize",resizeProgressBar))}function getCurrentScrollPosition(){return $(window).scrollTop()}function initializeProgressElement(){let e=$("#navbar").outerHeight(!0);$("body").css({"padding-top":e}),$("progress-container").css({"padding-top":e}),progressBar.css({top:e}),progressBar.attr({max:getDistanceToScroll(),value:getCurrentScrollPosition()})}function getDistanceToScroll(){return $(document).height()-$(window).height()}function resizeProgressBar(){progressBar.css({width:getWidthPercentage()+"%"})}function getWidthPercentage(){return getCurrentScrollPosition()/getDistanceToScroll()*100}const progressBar=$("#progress");window.onload=function(){setTimeout(progressBarSetup,50)};</script> </body> </html>

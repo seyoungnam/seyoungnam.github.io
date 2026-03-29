@@ -1,0 +1,779 @@
+<!DOCTYPE html> <html> <head> <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"> <meta charset="utf-8"> <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no"> <meta http-equiv="X-UA-Compatible" content="IE=edge"> <title>05 EKS Networking Lab: AWS LBC, Ingress, and Gateway API | Seyoung Nam</title> <meta name="author" content="Seyoung Nam"> <meta name="description" content="This page is the personal study note and codebase written during the EKS group study led by Jongho S."> <meta name="keywords" content="jekyll, jekyll-theme, academic-website, portfolio-website"> <link href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.1/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha256-DF7Zhf293AJxJNTmh5zhoYYIMs2oXitRfBjY+9L//AY=" crossorigin="anonymous"> <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/mdbootstrap@4.20.0/css/mdb.min.css" integrity="sha256-jpjYvU3G3N6nrrBwXJoVEYI/0zw8htfFnhT9ljN3JJw=" crossorigin="anonymous"> <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@5.15.4/css/all.min.css" integrity="sha256-mUZM63G8m73Mcidfrv5E+Y61y7a12O5mW4ezU3bxqW4=" crossorigin="anonymous"> <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/academicons@1.9.1/css/academicons.min.css" integrity="sha256-i1+4qU2G2860dGGIOJscdC30s9beBXjFfzjWLjBRsBg=" crossorigin="anonymous"> <link rel="stylesheet" type="text/css" href="https://fonts.googleapis.com/css?family=Roboto:300,400,500,700|Roboto+Slab:100,300,400,500,700|Material+Icons"> <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/jwarby/jekyll-pygments-themes@master/github.css" media="" id="highlight_theme_light"> <link rel="shortcut icon" href="data:image/svg+xml,&lt;svg%20xmlns=%22http://www.w3.org/2000/svg%22%20viewBox=%220%200%20100%20100%22&gt;&lt;text%20y=%22.9em%22%20font-size=%2290%22&gt;%E2%9A%9B%EF%B8%8F&lt;/text&gt;&lt;/svg&gt;"> <link rel="stylesheet" href="/assets/css/main.css"> <link rel="canonical" href="https://seyoungnam.github.io/eks/05-networking-lab-3/"> <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/jwarby/jekyll-pygments-themes@master/native.css" media="none" id="highlight_theme_dark"> <script src="/assets/js/theme.js"></script> <script src="/assets/js/dark_mode.js"></script> <script src="https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js" integrity="sha256-/xUj+3OJU5yExlq6GSYGSHk7tPXikynS7ogEvDej/m4=" crossorigin="anonymous"></script> <script type="text/javascript">window.MathJax={tex:{tags:"ams"}};</script> <script defer type="text/javascript" id="MathJax-script" src="https://cdn.jsdelivr.net/npm/mathjax@3.2.0/es5/tex-mml-chtml.js"></script> <script defer src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script> <script src="/assets/js/distillpub/template.v2.js"></script> <script src="/assets/js/distillpub/transforms.v2.js"></script> <script src="/assets/js/distillpub/overrides.js"></script> </head> <body> <d-front-matter> <script async type="text/json">{
+      "title": "05 EKS Networking Lab: AWS LBC, Ingress, and Gateway API",
+      "description": "This page is the personal study note and codebase written during the EKS group study led by Jongho S.",
+      "published": "March 29, 2026",
+      "authors": [
+        {
+          "author": "Seyoung Nam",
+          "authorURL": "https://www.linkedin.com/in/seyoungnam/",
+          "affiliations": [
+            {
+              "name": "",
+              "url": ""
+            }
+          ]
+        },
+        {
+          "author": "Jongho S.",
+          "authorURL": "https://www.linkedin.com/in/gasida99/",
+          "affiliations": [
+            {
+              "name": "",
+              "url": ""
+            }
+          ]
+        }
+        
+      ],
+      "katex": {
+        "delimiters": [
+          {
+            "left": "$",
+            "right": "$",
+            "display": false
+          },
+          {
+            "left": "$$",
+            "right": "$$",
+            "display": true
+          }
+        ]
+      }
+    }</script> </d-front-matter> <header> <nav id="navbar" class="navbar navbar-light navbar-expand-sm fixed-top"> <div class="container"> <a class="navbar-brand title font-weight-lighter" href="/"><span class="font-weight-bold">Seyoung </span>Nam</a> <button class="navbar-toggler collapsed ml-auto" type="button" data-toggle="collapse" data-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation"> <span class="sr-only">Toggle navigation</span> <span class="icon-bar top-bar"></span> <span class="icon-bar middle-bar"></span> <span class="icon-bar bottom-bar"></span> </button> <div class="collapse navbar-collapse text-right" id="navbarNav"> <ul class="navbar-nav ml-auto flex-nowrap"> <li class="nav-item "> <a class="nav-link" href="/">about</a> </li> <li class="nav-item "> <a class="nav-link" href="/blog/">blog</a> </li> <li class="nav-item dropdown "> <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">technology</a> <div class="dropdown-menu dropdown-menu-right" aria-labelledby="navbarDropdown"> <a class="dropdown-item" href="/go/">Golang</a> <div class="dropdown-divider"></div> <a class="dropdown-item" href="/k8s/">Kubernetes</a> <div class="dropdown-divider"></div> <a class="dropdown-item" href="/istio/">Istio</a> <div class="dropdown-divider"></div> <a class="dropdown-item" href="/eks/">EKS</a> <div class="dropdown-divider"></div> <a class="dropdown-item" href="/network/">Network</a> </div> </li> <li class="nav-item dropdown "> <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">algorithms</a> <div class="dropdown-menu dropdown-menu-right" aria-labelledby="navbarDropdown"> <a class="dropdown-item" href="/leetcode/">LeetCode</a> <div class="dropdown-divider"></div> <a class="dropdown-item" href="/algoexpert/">AlgoExpert</a> </div> </li> <li class="nav-item "> <a class="nav-link" href="/projects/">projects</a> </li> <li class="nav-item "> <a class="nav-link" href="/repositories/">repositories</a> </li> <li class="toggle-container"> <button id="light-toggle" title="Change theme"> <i class="fas fa-moon"></i> <i class="fas fa-sun"></i> </button> </li> </ul> </div> </div> </nav> <progress id="progress" value="0"> <div class="progress-container"> <span class="progress-bar"></span> </div> </progress> </header> <div class="post distill"> <d-title> <h1>05 EKS Networking Lab: AWS LBC, Ingress, and Gateway API</h1> <p>This page is the personal study note and codebase written during the EKS group study led by Jongho S.</p> </d-title> <d-byline></d-byline> <d-article> <d-contents> <nav class="l-text figcaption"> <h3>Contents</h3> <div><a href="#1-provision-aws-load-balancer-controller">1. Provision AWS Load Balancer Controller</a></div> <ul> <li><a href="#1-1-oidc-provider-setting">1.1. OIDC Provider Setting</a></li> <li><a href="#1-2-iam-policy-setting">1.2. IAM Policy Setting</a></li> <li><a href="#1-3-irsa-setting">1.3. IRSA Setting</a></li> <li><a href="#1-4-install-aws-load-balancer-controller">1.4. Install AWS Load Balancer Controller</a></li> </ul> <div><a href="#2-deploy-loadbalancer-service-and-test-app">2. Deploy LoadBalancer Service and test app</a></div> <div><a href="#3-ingress-l7-http">3. Ingress (L7: HTTP)</a></div> <div><a href="#4-externaldns">4. ExternalDNS</a></div> <ul> <li><a href="#4-1-deploy-externaldns-controller">4.1. Deploy ExternalDNS controller</a></li> <li><a href="#4-2-deploy-a-test-service">4.2. Deploy a test service</a></li> </ul> <div><a href="#5-gateway-api">5. Gateway API</a></div> <ul> <li><a href="#5-1-install-supporting-resources-to-use-gateway-api">5.1. Install supporting resources to use Gateway API</a></li> <li><a href="#5-2-deploy-a-sample-service">5.2. Deploy a sample service</a></li> </ul> </nav> </d-contents> <blockquote> <p>This lab is the continuation of <strong>03 EKS Networking Lab: Routing and Interfaces</strong> and <strong>04 EKS Networking Lab: Scaling Pod IPs with VPC CNI</strong>. You need to provision an EKS cluster by following the instruction described <a href="/eks/03-networking-lab.md">here</a>.</p> </blockquote> <h2 id="1-provision-aws-load-balancer-controller">1. Provision AWS Load Balancer Controller</h2> <h3 id="11-oidc-provider-setting">1.1. OIDC Provider Setting</h3> <p>Before provisioning the AWS Load Balancer Controller (LBC), you must set up an IAM OIDC provider for your cluster. This enables <strong>IAM Roles for Service Accounts (IRSA)</strong>, which allows the LBC (running as a Pod) to securely authenticate with AWS APIs to manage load balancers (ALB/NLB) using a specific IAM role, rather than relying on broad permissions attached to the worker nodes.</p> <p>Check if an OIDC provider already exists for your cluster:</p> <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>aws iam list-open-id-connect-providers | <span class="nb">grep</span> <span class="si">$(</span>aws eks describe-cluster <span class="nt">--name</span> myeks <span class="nt">--query</span> <span class="s2">"cluster.identity.oidc.issuer"</span> <span class="nt">--output</span> text | <span class="nb">cut</span> <span class="nt">-d</span> <span class="s1">'/'</span> <span class="nt">-f</span> 5<span class="si">)</span>
+<span class="s2">"Arn"</span>: <span class="s2">"arn:aws:iam::080403789922:oidc-provider/oidc.eks.us-east-1.amazonaws.com/id/EB53DEAA7B25D7AC731E272CA0873C5A"</span>
+</code></pre></div></div> <p>If it doesn’t exist, create it:</p> <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>eksctl utils associate-iam-oidc-provider <span class="nt">--cluster</span> myeks <span class="nt">--approve</span>
+</code></pre></div></div> <p>Search a public subnet to deploy ALB. <code class="language-plaintext highlighter-rouge">kubernetes.io/role/elb=1</code> tag is <a href="https://github.com/gasida/aews/blob/main/2w/vpc.tf#L39" rel="external nofollow noopener" target="_blank">already given to a public subnet</a>.</p> <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>aws ec2 describe-subnets <span class="nt">--filters</span> <span class="s2">"Name=tag:kubernetes.io/role/elb,Values=1"</span> <span class="nt">--output</span> table
+</code></pre></div></div> <figure> <picture> <img src="/assets/img/eks/05-networking-lab-3/public-subnet.png" class="img-fluid rounded z-depth-1" width="auto" height="auto" data-zoomable="" onerror="this.onerror=null; $('.responsive-img-srcset').remove();"> </picture> </figure> <h3 id="12-iam-policy-setting">1.2. IAM Policy Setting</h3> <p>Download IAM Policy json file:</p> <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>curl <span class="nt">-o</span> aws_lb_controller_policy.json https://raw.githubusercontent.com/kubernetes-sigs/aws-load-balancer-controller/refs/heads/main/docs/install/iam_policy.json
+<span class="nb">cat </span>aws_lb_controller_policy.json | jq
+</code></pre></div></div> <p>Create an IAM policy using the downloaded policy:</p> <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>aws iam create-policy <span class="se">\</span>
+    <span class="nt">--policy-name</span> AWSLoadBalancerControllerIAMPolicy <span class="se">\</span>
+    <span class="nt">--policy-document</span> file://aws_lb_controller_policy.json
+</code></pre></div></div> <figure> <picture> <img src="/assets/img/eks/05-networking-lab-3/lbc-iam.png" class="img-fluid rounded z-depth-1" width="auto" height="auto" data-zoomable="" onerror="this.onerror=null; $('.responsive-img-srcset').remove();"> </picture> </figure> <h3 id="13-irsa-setting">1.3. IRSA Setting</h3> <p>Confirm IRSA is not configured yet:</p> <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nv">CLUSTER_NAME</span><span class="o">=</span>myeks
+eksctl get iamserviceaccount <span class="nt">--cluster</span> <span class="nv">$CLUSTER_NAME</span>
+No iamserviceaccounts found
+
+kubectl get serviceaccounts <span class="nt">-n</span> kube-system aws-load-balancer-controller
+Error from server <span class="o">(</span>NotFound<span class="o">)</span>: serviceaccounts <span class="s2">"aws-load-balancer-controller"</span> not found
+</code></pre></div></div> <p>Create two resources with the following command:</p> <ul> <li>aws-load-balancer-controller <code class="language-plaintext highlighter-rouge">ServiceAccount</code> in kube-system namespace</li> <li>IAM role for aws-load-balancer-controller <code class="language-plaintext highlighter-rouge">ServiceAccount</code>. This is an AWS IAM resource. <div class="language-bash highlighter-rouge"> <div class="highlight"><pre class="highlight"><code><span class="nv">ACCOUNT_ID</span><span class="o">=</span><span class="si">$(</span>aws sts get-caller-identity <span class="nt">--query</span> <span class="s2">"Account"</span> <span class="nt">--output</span> text<span class="si">)</span>
+eksctl create iamserviceaccount <span class="se">\</span>
+<span class="nt">--cluster</span><span class="o">=</span><span class="nv">$CLUSTER_NAME</span> <span class="se">\</span>
+<span class="nt">--namespace</span><span class="o">=</span>kube-system <span class="se">\</span>
+<span class="nt">--name</span><span class="o">=</span>aws-load-balancer-controller <span class="se">\</span>
+<span class="nt">--attach-policy-arn</span><span class="o">=</span>arn:aws:iam::<span class="nv">$ACCOUNT_ID</span>:policy/AWSLoadBalancerControllerIAMPolicy <span class="se">\</span>
+<span class="nt">--override-existing-serviceaccounts</span> <span class="se">\</span>
+<span class="nt">--approve</span>
+</code></pre></div> </div> </li> </ul> <p>Confirm the aws-load-balancer-controller <code class="language-plaintext highlighter-rouge">ServiceAccount</code> is created:</p> <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>eksctl get iamserviceaccount <span class="nt">--cluster</span> <span class="nv">$CLUSTER_NAME</span>
+NAMESPACE       NAME                            ROLE ARN
+kube-system     aws-load-balancer-controller    arn:aws:iam::080403789922:role/eksctl-myeks-addon-iamserviceaccount-kube-sys-Role1-iMhfQoJcfrJZ
+
+kubectl get serviceaccounts <span class="nt">-n</span> kube-system aws-load-balancer-controller <span class="nt">-o</span> yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  annotations:
+    eks.amazonaws.com/role-arn: arn:aws:iam::080403789922:role/eksctl-myeks-addon-iamserviceaccount-kube-sys-Role1-iMhfQoJcfrJZ
+</code></pre></div></div> <p>Confirm the above IAM role is created:</p> <figure> <picture> <img src="/assets/img/eks/05-networking-lab-3/iam-role.png" class="img-fluid rounded z-depth-1" width="auto" height="auto" data-zoomable="" onerror="this.onerror=null; $('.responsive-img-srcset').remove();"> </picture> </figure> <h3 id="14-install-aws-load-balancer-controller">1.4. Install AWS Load Balancer Controller</h3> <p>Add helm chart repo:</p> <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>helm repo add eks https://aws.github.io/eks-charts
+helm repo update
+</code></pre></div></div> <p>Install AWS LBC using helm chart:</p> <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># https://artifacthub.io/packages/helm/aws/aws-load-balancer-controller</span>
+<span class="c"># https://github.com/aws/eks-charts/blob/master/stable/aws-load-balancer-controller/values.yaml</span>
+helm <span class="nb">install </span>aws-load-balancer-controller eks/aws-load-balancer-controller <span class="nt">-n</span> kube-system <span class="nt">--version</span> 3.1.0 <span class="se">\</span>
+  <span class="nt">--set</span> <span class="nv">clusterName</span><span class="o">=</span><span class="nv">$CLUSTER_NAME</span> <span class="se">\</span>
+  <span class="nt">--set</span> serviceAccount.name<span class="o">=</span>aws-load-balancer-controller <span class="se">\</span>
+  <span class="nt">--set</span> serviceAccount.create<span class="o">=</span><span class="nb">false
+
+</span>NAME: aws-load-balancer-controller
+LAST DEPLOYED: Sat Mar 28 23:57:55 2026
+NAMESPACE: kube-system
+STATUS: deployed
+REVISION: 1
+DESCRIPTION: Install <span class="nb">complete
+</span>TEST SUITE: None
+NOTES:
+AWS Load Balancer controller installed!
+</code></pre></div></div> <p>Confirm:</p> <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>helm list <span class="nt">-n</span> kube-system
+NAME                            NAMESPACE       REVISION        UPDATED                                 STATUS          CHART                                   APP VERSION
+aws-load-balancer-controller    kube-system     1               2026-03-28 23:57:55.894328 <span class="nt">-0400</span> EDT    deployed        aws-load-balancer-controller-3.1.0      v3.1.0     
+...
+</code></pre></div></div> <p>Confirm pods are crashed:</p> <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>kubectl get pod <span class="nt">-n</span> kube-system <span class="nt">-l</span> app.kubernetes.io/name<span class="o">=</span>aws-load-balancer-controller
+NAME                                            READY   STATUS             RESTARTS      AGE
+aws-load-balancer-controller-7875649799-bq2vs   0/1     CrashLoopBackOff   2 <span class="o">(</span>21s ago<span class="o">)</span>   61s
+aws-load-balancer-controller-7875649799-zvbns   0/1     CrashLoopBackOff   2 <span class="o">(</span>23s ago<span class="o">)</span>   61s
+</code></pre></div></div> <p>Check logs to understand why pods are crashed:</p> <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>kubectl logs <span class="nt">-n</span> kube-system deployment/aws-load-balancer-controller
+Found 2 pods, using pod/aws-load-balancer-controller-7875649799-bq2vs
+<span class="o">{</span><span class="s2">"level"</span>:<span class="s2">"info"</span>,<span class="s2">"ts"</span>:<span class="s2">"2026-03-29T03:59:59Z"</span>,<span class="s2">"msg"</span>:<span class="s2">"version"</span>,<span class="s2">"GitVersion"</span>:<span class="s2">"v3.1.0"</span>,<span class="s2">"GitCommit"</span>:<span class="s2">"250024dbcc7a428cfd401c949e04de23c167d46e"</span>,<span class="s2">"BuildDate"</span>:<span class="s2">"2026-02-24T18:21:40+0000"</span><span class="o">}</span>
+<span class="o">{</span><span class="s2">"level"</span>:<span class="s2">"error"</span>,<span class="s2">"ts"</span>:<span class="s2">"2026-03-29T04:00:04Z"</span>,<span class="s2">"logger"</span>:<span class="s2">"setup"</span>,<span class="s2">"msg"</span>:<span class="s2">"unable to initialize AWS cloud"</span>,<span class="s2">"error"</span>:<span class="s2">"failed to get VPC ID: failed to fetch VPC ID from instance metadata: error in fetching vpc id through ec2 metadata: get mac metadata: operation error ec2imds: GetMetadata, canceled, context deadline exceeded"</span><span class="o">}</span>
+</code></pre></div></div> <p>Keyword is <strong>error in fetching vpc id through ec2 metadata</strong>. To allow AWS LBC to acquire VPC ID, there are two options. First, configure params for <code class="language-plaintext highlighter-rouge">helm install</code></p> <ul> <li><code class="language-plaintext highlighter-rouge">-set region=region-code</code></li> <li><code class="language-plaintext highlighter-rouge">-set vpcId=vpc-xxxxxxxx</code></li> </ul> <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># get vpc id</span>
+terraform state show <span class="s1">'module.vpc.aws_vpc.this[0]'</span>
+terraform show <span class="nt">-json</span> | jq <span class="nt">-r</span> <span class="s1">'.values.root_module.child_modules[] | select(.address == "module.vpc") | .resources[] | select(.address == "module.vpc.aws_vpc.this[0]") | .values.id'</span>
+vpc-010235c6a899415ba
+
+<span class="c"># Don't run it. We will use the second option.</span>
+helm <span class="nb">install </span>aws-load-balancer-controller eks/aws-load-balancer-controller <span class="nt">-n</span> kube-system <span class="nt">--version</span> 3.1.0 <span class="se">\</span>
+  <span class="nt">--set</span> <span class="nv">clusterName</span><span class="o">=</span>myeks <span class="se">\</span>
+  <span class="nt">--set</span> serviceAccount.name<span class="o">=</span>aws-load-balancer-controller <span class="se">\</span>
+  <span class="nt">--set</span> serviceAccount.create<span class="o">=</span><span class="nb">false</span> <span class="se">\</span>
+  <span class="nt">--set</span> <span class="nv">region</span><span class="o">=</span>us-east-1 <span class="se">\</span>
+  <span class="nt">--set</span> <span class="nv">vpcId</span><span class="o">=</span>vpc-vpc-010235c6a899415ba
+</code></pre></div></div> <p>Second, modify instance metadata options. EC2 &gt; Instances &gt; Choose each instance &gt; Actions &gt; Instance settings &gt; Modify instance metadata options &gt; HTTP PUT response hop limit -&gt; 2 Make sure the hop limit is changed for every instances.</p> <figure> <picture> <img src="/assets/img/eks/05-networking-lab-3/iam-role.png" class="img-fluid rounded z-depth-1" width="auto" height="auto" data-zoomable="" onerror="this.onerror=null; $('.responsive-img-srcset').remove();"> </picture> </figure> <p>Restart aws-load-balancer-controller and check pod status again:</p> <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>kubectl rollout restart <span class="nt">-n</span> kube-system deploy aws-load-balancer-controller
+
+kubectl get pod <span class="nt">-n</span> kube-system <span class="nt">-l</span> app.kubernetes.io/name<span class="o">=</span>aws-load-balancer-controller
+NAME                                           READY   STATUS    RESTARTS   AGE
+aws-load-balancer-controller-8486bfd96-6crzr   1/1     Running   0          33s
+aws-load-balancer-controller-8486bfd96-kf8lq   1/1     Running   0          17s
+</code></pre></div></div> <p>Check deployed CRDs:</p> <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>kubectl get crd | <span class="nb">grep</span> <span class="nt">-E</span> <span class="s1">'elb|gateway'</span>
+albtargetcontrolconfigs.elbv2.k8s.aws           2026-03-29T03:57:55Z
+ingressclassparams.elbv2.k8s.aws                2026-03-29T03:57:55Z
+listenerruleconfigurations.gateway.k8s.aws      2026-03-29T03:57:55Z
+loadbalancerconfigurations.gateway.k8s.aws      2026-03-29T03:57:55Z
+targetgroupbindings.elbv2.k8s.aws               2026-03-29T03:57:55Z
+targetgroupconfigurations.gateway.k8s.aws       2026-03-29T03:57:55Z
+
+kubectl explain ingressclassparams.elbv2.k8s.aws
+kubectl explain ingressclassparams.elbv2.k8s.aws.spec
+kubectl explain ingressclassparams.elbv2.k8s.aws.spec.listeners
+GROUP:      elbv2.k8s.aws
+KIND:       IngressClassParams
+VERSION:    v1beta1
+
+FIELD: listeners &lt;<span class="o">[]</span>Object&gt;
+
+
+DESCRIPTION:
+    Listeners define a list of listeners with their protocol, port and
+    attributes.
+    
+FIELDS:
+  listenerAttributes    &lt;<span class="o">[]</span>Object&gt;
+    The attributes of the listener
+
+  port  &lt;integer&gt;
+    The port of the listener
+
+  protocol      &lt;string&gt;
+    The protocol of the listener
+
+kubectl explain targetgroupbindings.elbv2.k8s.aws.spec
+kubectl explain albtargetcontrolconfigs.elbv2.k8s.aws.spec
+</code></pre></div></div> <p>Check AWS LBC:</p> <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>kubectl get deployment <span class="nt">-n</span> kube-system aws-load-balancer-controller
+kubectl describe deploy <span class="nt">-n</span> kube-system aws-load-balancer-controller
+kubectl describe deploy <span class="nt">-n</span> kube-system aws-load-balancer-controller | <span class="nb">grep</span> <span class="s1">'Service Account'</span>
+  Service Account:  aws-load-balancer-controller
+</code></pre></div></div> <p>Check <code class="language-plaintext highlighter-rouge">ClusterRole</code>:</p> <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>kubectl describe clusterrolebindings.rbac.authorization.k8s.io aws-load-balancer-controller-rolebinding
+kubectl describe clusterroles.rbac.authorization.k8s.io aws-load-balancer-controller-role
+...
+  Resources                                              Non-Resource URLs  Resource Names  Verbs
+  <span class="nt">---------</span>                                              <span class="nt">-----------------</span>  <span class="nt">--------------</span>  <span class="nt">-----</span>
+  targetgroupbindings.elbv2.k8s.aws                      <span class="o">[]</span>                 <span class="o">[]</span>              <span class="o">[</span>create delete get list patch update watch]
+...
+  ingresses                                              <span class="o">[]</span>                 <span class="o">[]</span>              <span class="o">[</span>get list patch update watch]
+  services                                               <span class="o">[]</span>                 <span class="o">[]</span>              <span class="o">[</span>get list patch update watch]
+...
+  ingresses.elbv2.k8s.aws/status                         <span class="o">[]</span>                 <span class="o">[]</span>              <span class="o">[</span>update patch]
+  pods.elbv2.k8s.aws/status                              <span class="o">[]</span>                 <span class="o">[]</span>              <span class="o">[</span>update patch]
+  services.elbv2.k8s.aws/status                          <span class="o">[]</span>                 <span class="o">[]</span>              <span class="o">[</span>update patch]
+  targetgroupbindings.elbv2.k8s.aws/status               <span class="o">[]</span>                 <span class="o">[]</span>              <span class="o">[</span>update patch]
+...
+ ...
+...
+</code></pre></div></div> <h2 id="2-deploy-loadbalancer-service-and-test-app">2. Deploy LoadBalancer Service and test app</h2> <p>Set up monitoring first:</p> <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>watch <span class="nt">-d</span> kubectl get pod,svc,ep,endpointslices
+</code></pre></div></div> <p>Deploy <code class="language-plaintext highlighter-rouge">Deployment</code> and <code class="language-plaintext highlighter-rouge">Service</code> with the NLB IP type:</p> <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">cat</span> <span class="o">&lt;&lt;</span> <span class="no">EOF</span><span class="sh"> &gt; echo-service-nlb.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: deploy-echo
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: deploy-websrv
+  template:
+    metadata:
+      labels:
+        app: deploy-websrv
+    spec:
+      terminationGracePeriodSeconds: 0
+      containers:
+      - name: aews-websrv
+        image: k8s.gcr.io/echoserver:1.10  # open https://registry.k8s.io/v2/echoserver/tags/list
+        ports:
+        - containerPort: 8080
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: svc-nlb-ip-type
+  annotations:
+    service.beta.kubernetes.io/aws-load-balancer-nlb-target-type: ip
+    service.beta.kubernetes.io/aws-load-balancer-scheme: internet-facing
+    service.beta.kubernetes.io/aws-load-balancer-healthcheck-port: "8080"
+    service.beta.kubernetes.io/aws-load-balancer-cross-zone-load-balancing-enabled: "true"
+spec:
+  allocateLoadBalancerNodePorts: false  # K8s 1.24+ 무의미한 NodePort 할당 차단
+  ports:
+    - port: 80
+      targetPort: 8080
+      protocol: TCP
+  type: LoadBalancer
+  selector:
+    app: deploy-websrv
+</span><span class="no">EOF
+</span>kubectl apply <span class="nt">-f</span> echo-service-nlb.yaml
+</code></pre></div></div> <p>Check the DNS record:</p> <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>kubectl get svc svc-nlb-ip-type
+NAME              TYPE           CLUSTER-IP       EXTERNAL-IP                                                                    PORT<span class="o">(</span>S<span class="o">)</span>   AGE
+svc-nlb-ip-type   LoadBalancer   10.100.251.170   k8s-default-svcnlbip-9aa6a0b40c-52a2a126c4232b67.elb.us-east-1.amazonaws.com   80/TCP    22m
+</code></pre></div></div> <p><code class="language-plaintext highlighter-rouge">k8s-default-svcnlbip-9aa6a0b40c-52a2a126c4232b67.elb.us-east-1.amazonaws.com</code> is the DNS record for <code class="language-plaintext highlighter-rouge">deploy-echo</code> service. Its port number is 80.</p> <figure> <picture> <img src="/assets/img/eks/05-networking-lab-3/nlb-resource-map.png" class="img-fluid rounded z-depth-1" width="auto" height="auto" data-zoomable="" onerror="this.onerror=null; $('.responsive-img-srcset').remove();"> </picture> </figure> <p>Note that two IP addresses on Targets are pod IP because we are using IP target mode(<code class="language-plaintext highlighter-rouge">service.beta.kubernetes.io/aws-load-balancer-nlb-target-type: ip</code>)</p> <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>kubectl get targetgroupbindings
+NAME                              SERVICE-NAME      SERVICE-PORT   TARGET-TYPE   AGE
+k8s-default-svcnlbip-2838699ff8   svc-nlb-ip-type   80             ip            33m
+</code></pre></div></div> <p><code class="language-plaintext highlighter-rouge">targetgroupbindings</code> indicates the <code class="language-plaintext highlighter-rouge">svc-nlb-ip-type</code> NLB sends <strong>traffic directly to the Pod IPs</strong>(TARGET-TYPE is ip).</p> <figure> <picture> <img src="/assets/img/eks/05-networking-lab-3/deregistration-delay.png" class="img-fluid rounded z-depth-1" width="auto" height="auto" data-zoomable="" onerror="this.onerror=null; $('.responsive-img-srcset').remove();"> </picture> </figure> <p>In a Network Load Balancer, the <strong>Deregistration Delay</strong> (also known as the draining interval) is the amount of time the balancer waits before it fully removes a target that has been marked as unhealthy or is being terminated. The default 300s is much longer than most Pods need to shut down. This can make your CI/CD pipelines feel “stuck” for 5 minutes during a rolling update as the old Pods wait to be fully removed from the NLB.</p> <p>Let’s change the default value. Add the following annotation to <code class="language-plaintext highlighter-rouge">svc-nlb-ip-type</code> Service in <code class="language-plaintext highlighter-rouge">echo-service-nlb.yaml</code> file:</p> <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>service.beta.kubernetes.io/aws-load-balancer-target-group-attributes: deregistration_delay.timeout_seconds<span class="o">=</span>60
+
+kubectl apply <span class="nt">-f</span> echo-service-nlb.yaml
+</code></pre></div></div> <p>Check NLB:</p> <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>aws elbv2 describe-load-balancers | jq
+aws elbv2 describe-load-balancers <span class="nt">--query</span> <span class="s1">'LoadBalancers[*].State.Code'</span> <span class="nt">--output</span> text
+<span class="nv">ALB_ARN</span><span class="o">=</span><span class="si">$(</span>aws elbv2 describe-load-balancers <span class="nt">--query</span> <span class="s1">'LoadBalancers[?contains(LoadBalancerName, `k8s-default-svcnlbip`) == `true`].LoadBalancerArn'</span> | jq <span class="nt">-r</span> <span class="s1">'.[0]'</span><span class="si">)</span>
+aws elbv2 describe-target-groups <span class="nt">--load-balancer-arn</span> <span class="nv">$ALB_ARN</span> | jq
+<span class="nv">TARGET_GROUP_ARN</span><span class="o">=</span><span class="si">$(</span>aws elbv2 describe-target-groups <span class="nt">--load-balancer-arn</span> <span class="nv">$ALB_ARN</span> | jq <span class="nt">-r</span> <span class="s1">'.TargetGroups[0].TargetGroupArn'</span><span class="si">)</span>
+aws elbv2 describe-target-health <span class="nt">--target-group-arn</span> <span class="nv">$TARGET_GROUP_ARN</span> | jq
+</code></pre></div></div> <p>Check load balancing:</p> <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nv">NLB</span><span class="o">=</span><span class="si">$(</span>kubectl get svc svc-nlb-ip-type <span class="nt">-o</span> <span class="nv">jsonpath</span><span class="o">=</span><span class="s1">'{.status.loadBalancer.ingress[0].hostname}'</span><span class="si">)</span>
+curl <span class="nt">-s</span> <span class="nv">$NLB</span>
+<span class="k">for </span>i <span class="k">in</span> <span class="o">{</span>1..100<span class="o">}</span><span class="p">;</span> <span class="k">do </span>curl <span class="nt">-s</span> <span class="nv">$NLB</span> | <span class="nb">grep </span>Hostname <span class="p">;</span> <span class="k">done</span> | <span class="nb">sort</span> | <span class="nb">uniq</span> <span class="nt">-c</span> | <span class="nb">sort</span> <span class="nt">-nr</span>
+  55 Hostname: deploy-echo-7549f6d6d8-8bxkk
+  45 Hostname: deploy-echo-7549f6d6d8-s89mv
+</code></pre></div></div> <p>Delete resources:</p> <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>kubectl delete deploy deploy-echo<span class="p">;</span> kubectl delete svc svc-nlb-ip-type
+</code></pre></div></div> <h2 id="3-ingress-l7-http">3. Ingress (L7: HTTP)</h2> <p><code class="language-plaintext highlighter-rouge">Ingress</code> works as a <strong>web proxy</strong>, exposing cluster-internal services(<code class="language-plaintext highlighter-rouge">ClusterIP</code>, <code class="language-plaintext highlighter-rouge">NodePort</code>, <code class="language-plaintext highlighter-rouge">LoadBalancer</code>) to the internet.</p> <pre><code class="language-mermaid">flowchart LR
+    External["External Client"]
+    subgraph AWS ["AWS Cloud"]
+        ALB["Application Load Balancer (ALB)"]
+        subgraph Cluster ["EKS Cluster"]
+            LBC["AWS Load Balancer Controller"]
+            Ingress["Ingress Object"]
+            subgraph Node ["Worker Node"]
+                Pod1["Application Pod 1"]
+                Pod2["Application Pod 2"]
+            end
+        end
+    end
+
+    External -- "HTTP/HTTPS" --&gt; ALB
+    LBC -- "Watches" --&gt; Ingress
+    LBC -- "Configures" --&gt; ALB
+    ALB -- "Direct Routing (IP mode)" --&gt; Pod1
+    ALB -- "Direct Routing (IP mode)" --&gt; Pod2
+</code></pre> <p>Deploy test service with Ingress(ALB):</p> <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">cat</span> <span class="o">&lt;&lt;</span><span class="no">EOF</span><span class="sh"> | kubectl apply -f -
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: game-2048
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: game-2048
+  name: deployment-2048
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: app-2048
+  replicas: 2
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: app-2048
+    spec:
+      containers:
+      - image: public.ecr.aws/l6m2t8p7/docker-2048:latest
+        imagePullPolicy: Always
+        name: app-2048
+        ports:
+        - containerPort: 80
+---
+apiVersion: v1
+kind: Service
+metadata:
+  namespace: game-2048
+  name: service-2048
+spec:
+  ports:
+    - port: 80
+      targetPort: 80
+      protocol: TCP
+  type: NodePort
+  selector:
+    app.kubernetes.io/name: app-2048
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  namespace: game-2048
+  name: ingress-2048
+  annotations:
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/target-type: ip
+spec:
+  ingressClassName: alb
+  rules:
+    - http:
+        paths:
+        - path: /
+          pathType: Prefix
+          backend:
+            service:
+              name: service-2048
+              port:
+                number: 80
+</span><span class="no">EOF
+</span></code></pre></div></div> <p>Confirm the deployment:</p> <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>kubectl get ingressclass
+kubectl get ingress,svc,ep,pod <span class="nt">-n</span> game-2048
+NAME                                     CLASS   HOSTS   ADDRESS                                                                   PORTS   AGE
+ingress.networking.k8s.io/ingress-2048   alb     <span class="k">*</span>       k8s-game2048-ingress2-70d50ce3fd-1193426033.us-east-1.elb.amazonaws.com   80      6m52s
+
+NAME                   TYPE       CLUSTER-IP       EXTERNAL-IP   PORT<span class="o">(</span>S<span class="o">)</span>        AGE
+service/service-2048   NodePort   10.100.138.110   &lt;none&gt;        80:31437/TCP   6m52s
+
+NAME                     ENDPOINTS                         AGE
+endpoints/service-2048   192.168.2.64:80,192.168.4.70:80   6m52s
+
+NAME                                   READY   STATUS    RESTARTS   AGE
+pod/deployment-2048-7bf64bccb7-8pw25   1/1     Running   0          6m52s
+pod/deployment-2048-7bf64bccb7-tbpbg   1/1     Running   0          6m52s
+</code></pre></div></div> <p>From <code class="language-plaintext highlighter-rouge">Ingress</code> object, we learn that <code class="language-plaintext highlighter-rouge">game-2048</code> service is able to access with <code class="language-plaintext highlighter-rouge">k8s-game2048-ingress2-70d50ce3fd-1193426033.us-east-1.elb.amazonaws.com</code> hostname and port <code class="language-plaintext highlighter-rouge">80</code>.</p> <figure> <picture> <img src="/assets/img/eks/05-networking-lab-3/game-resource-map.png" class="img-fluid rounded z-depth-1" width="auto" height="auto" data-zoomable="" onerror="this.onerror=null; $('.responsive-img-srcset').remove();"> </picture> </figure> <p>A new load balancer has appeared in the Load Balancers page in the AWS console, with <code class="language-plaintext highlighter-rouge">application</code> type, listening on port 80. The incoming requests are forwarded to one of the <code class="language-plaintext highlighter-rouge">game-2048</code> pods directly, due to <code class="language-plaintext highlighter-rouge">alb.ingress.kubernetes.io/target-type: ip</code> annotation dangling in the <code class="language-plaintext highlighter-rouge">Ingress</code> object.</p> <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>kubectl describe ingress <span class="nt">-n</span> game-2048 ingress-2048
+Name:             ingress-2048
+Labels:           &lt;none&gt;
+Namespace:        game-2048
+Address:          k8s-game2048-ingress2-70d50ce3fd-1193426033.us-east-1.elb.amazonaws.com
+Ingress Class:    alb
+Default backend:  &lt;default&gt;
+Rules:
+  Host        Path  Backends
+  <span class="nt">----</span>        <span class="nt">----</span>  <span class="nt">--------</span>
+  <span class="k">*</span>           
+              /   service-2048:80 <span class="o">(</span>192.168.4.70:80,192.168.2.64:80<span class="o">)</span>
+Annotations:  alb.ingress.kubernetes.io/scheme: internet-facing
+              alb.ingress.kubernetes.io/target-type: ip
+Events:
+  Type    Reason                  Age   From     Message
+  <span class="nt">----</span>    <span class="nt">------</span>                  <span class="nt">----</span>  <span class="nt">----</span>     <span class="nt">-------</span>
+  Normal  SuccessfullyReconciled  24m   ingress  Successfully reconciled
+</code></pre></div></div> <p>Confirm the access to <code class="language-plaintext highlighter-rouge">game-2048</code> service with <code class="language-plaintext highlighter-rouge">http://k8s-game2048-ingress2-70d50ce3fd-1193426033.us-east-1.elb.amazonaws.com/</code> on your web browser.</p> <figure> <picture> <img src="/assets/img/eks/05-networking-lab-3/access-game.png" class="img-fluid rounded z-depth-1" width="auto" height="auto" data-zoomable="" onerror="this.onerror=null; $('.responsive-img-srcset').remove();"> </picture> </figure> <p>Delete resources:</p> <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>kubectl delete ingress ingress-2048 <span class="nt">-n</span> game-2048
+kubectl delete svc service-2048 <span class="nt">-n</span> game-2048 <span class="o">&amp;&amp;</span> kubectl delete deploy deployment-2048 <span class="nt">-n</span> game-2048 <span class="o">&amp;&amp;</span> kubectl delete ns game-2048
+</code></pre></div></div> <h2 id="4-externaldns">4. ExternalDNS</h2> <p>Managing DNS records manually whenever a new <code class="language-plaintext highlighter-rouge">Service</code> or <code class="language-plaintext highlighter-rouge">Ingress</code> is created is error-prone and inefficient. <strong>ExternalDNS</strong> automates this process by watching Kubernetes resources (<code class="language-plaintext highlighter-rouge">Services</code> and <code class="language-plaintext highlighter-rouge">Ingresses</code>) and automatically synchronizing their hostnames with external DNS providers like <strong>AWS Route 53</strong>. It allows you to control DNS records dynamically via Kubernetes annotations, making your infrastructure more agile and self-healing.</p> <pre><code class="language-mermaid">flowchart LR
+    subgraph Cluster ["EKS Cluster"]
+        Resources["Services / Ingresses"]
+        EDNS["ExternalDNS Controller"]
+    end
+    
+    subgraph AWS ["AWS Cloud"]
+        R53["Route 53 Hosted Zone"]
+    end
+
+    EDNS -- "1. Watches Annotations" --&gt; Resources
+    EDNS -- "2. Syncs Records" --&gt; R53
+    R53 -- "3. Resolves to" --&gt; LB["Load Balancer"]
+</code></pre> <pre><code class="language-mermaid">flowchart TD
+    subgraph Cluster ["EKS Cluster"]
+        SA["ServiceAccount (external-dns)"]
+        Token["OIDC Web Identity Token"]
+        EDNS["ExternalDNS Pod"]
+    end
+
+    subgraph IAM ["AWS IAM"]
+        Role["IAM Role (ExternalDNSControllerRole)"]
+        Policy["IAM Policy (Route 53 Permissions)"]
+    end
+
+    EDNS -- "Assumes Role with" --&gt; Token
+    SA -- "Annotated with" --&gt; Role
+    Role -- "Attached" --&gt; Policy
+    EDNS -- "Authorized to manage" --&gt; R53["Route 53"]
+</code></pre> <h3 id="41-deploy-externaldns-controller">4.1. Deploy ExternalDNS controller</h3> <p>Create a policy file:</p> <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">cat</span> <span class="o">&lt;&lt;</span> <span class="no">EOF</span><span class="sh"> &gt; externaldns_controller_policy.json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": [
+        "route53:ChangeResourceRecordSets",
+        "route53:ListResourceRecordSets",
+        "route53:ListTagsForResources"
+      ],
+      "Resource": [
+        "arn:aws:route53:::hostedzone/*"
+      ]
+    },
+    {
+      "Effect": "Allow",
+      "Action": [
+        "route53:ListHostedZones"
+      ],
+      "Resource": [
+        "*"
+      ]
+    }
+  ]
+}
+</span><span class="no">EOF
+</span></code></pre></div></div> <p>Create the policy in AWS IAM:</p> <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>aws iam create-policy <span class="se">\</span>
+  <span class="nt">--policy-name</span> ExternalDNSControllerPolicy <span class="se">\</span>
+  <span class="nt">--policy-document</span> file://externaldns_controller_policy.json
+</code></pre></div></div> <p>Confirm:</p> <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nv">ACCOUNT_ID</span><span class="o">=</span><span class="si">$(</span>aws sts get-caller-identity <span class="nt">--query</span> <span class="s2">"Account"</span> <span class="nt">--output</span> text<span class="si">)</span>
+aws iam get-policy <span class="nt">--policy-arn</span> arn:aws:iam::<span class="nv">$ACCOUNT_ID</span>:policy/ExternalDNSControllerPolicy | jq
+</code></pre></div></div> <p>Create IAM Role for ServiceAccount(IRSA) using cloud formation:</p> <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nv">CLUSTER_NAME</span><span class="o">=</span>myeks
+
+eksctl create iamserviceaccount <span class="se">\</span>
+  <span class="nt">--cluster</span><span class="o">=</span><span class="nv">$CLUSTER_NAME</span> <span class="se">\</span>
+  <span class="nt">--namespace</span><span class="o">=</span>kube-system <span class="se">\</span>
+  <span class="nt">--name</span><span class="o">=</span>external-dns <span class="se">\</span>
+  <span class="nt">--attach-policy-arn</span><span class="o">=</span>arn:aws:iam::<span class="nv">$ACCOUNT_ID</span>:policy/ExternalDNSControllerPolicy <span class="se">\</span>
+  <span class="nt">--override-existing-serviceaccounts</span> <span class="se">\</span>
+  <span class="nt">--approve</span>
+</code></pre></div></div> <p>Confirm the creation:</p> <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>eksctl get iamserviceaccount <span class="nt">--cluster</span> <span class="nv">$CLUSTER_NAME</span>
+NAMESPACE       NAME                            ROLE ARN
+kube-system     aws-load-balancer-controller    arn:aws:iam::911283464785:role/eksctl-myeks-addon-iamserviceaccount-kube-sys-Role1-2REDIfJ9sfGa
+kube-system     external-dns                    arn:aws:iam::911283464785:role/eksctl-myeks-addon-iamserviceaccount-kube-sys-Role1-F76qLAoueSgl
+
+kubectl get serviceaccounts <span class="nt">-n</span> kube-system external-dns <span class="nt">-o</span> yaml
+</code></pre></div></div> <p>Create <code class="language-plaintext highlighter-rouge">external-dns-values.yaml</code> file that contains required values for <code class="language-plaintext highlighter-rouge">ExternalDNS</code>:</p> <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nv">MyDomain</span><span class="o">={</span>mydomain.com<span class="o">}</span>
+
+<span class="nb">cat</span> <span class="o">&lt;&lt;</span> <span class="no">EOF</span><span class="sh"> &gt; external-dns-values.yaml
+provider: aws
+
+# use the ServiceAccount generated above
+serviceAccount:
+  create: false
+  name: external-dns
+
+# recommend for security
+# allow to control the specified domain only (e.g. example.com)
+domainFilters:
+  - </span><span class="nv">$MyDomain</span><span class="sh">
+
+# Record update policy
+# sync: if deleted in k8s, the record is deleted in Route 53 too.
+# upsert-only: create/modify is synced, but delete is not.
+policy: sync
+
+# target resources to watch
+sources:
+  - service
+  - ingress
+
+# (optional) add identifier in TXT record
+txtOwnerId: "stduy-myeks-cluster"
+
+registry: txt
+
+logLevel: info
+</span><span class="no">EOF
+</span></code></pre></div></div> <p>Helm repo add and update:</p> <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>helm repo add external-dns https://kubernetes-sigs.github.io/external-dns/
+helm repo update
+</code></pre></div></div> <p>Helm install:</p> <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>helm <span class="nb">install </span>external-dns external-dns/external-dns <span class="se">\</span>
+  <span class="nt">-n</span> kube-system <span class="se">\</span>
+  <span class="nt">-f</span> external-dns-values.yaml
+</code></pre></div></div> <p>Confirm the creation:</p> <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>helm list <span class="nt">-n</span> kube-system
+kubectl get pod <span class="nt">-l</span> app.kubernetes.io/name<span class="o">=</span>external-dns <span class="nt">-n</span> kube-system
+</code></pre></div></div> <h3 id="42-deploy-a-test-service">4.2. Deploy a test service:</h3> <p>Set up monitoring in a separate terminal:</p> <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>watch <span class="nt">-d</span> <span class="s1">'kubectl get pod,svc'</span>
+kubectl logs deploy/external-dns <span class="nt">-n</span> kube-system <span class="nt">-f</span>
+</code></pre></div></div> <p>Deploy <code class="language-plaintext highlighter-rouge">tetris</code> app:</p> <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">cat</span> <span class="o">&lt;&lt;</span><span class="no">EOF</span><span class="sh"> | kubectl apply -f -
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: tetris
+  labels:
+    app: tetris
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: tetris
+  template:
+    metadata:
+      labels:
+        app: tetris
+    spec:
+      containers:
+      - name: tetris
+        image: bsord/tetris
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: tetris
+  annotations:
+    service.beta.kubernetes.io/aws-load-balancer-nlb-target-type: ip
+    service.beta.kubernetes.io/aws-load-balancer-scheme: internet-facing
+    service.beta.kubernetes.io/aws-load-balancer-cross-zone-load-balancing-enabled: "true"
+    service.beta.kubernetes.io/aws-load-balancer-backend-protocol: "http"
+    #service.beta.kubernetes.io/aws-load-balancer-healthcheck-port: "80"
+spec:
+  selector:
+    app: tetris
+  ports:
+  - port: 80
+    protocol: TCP
+    targetPort: 80
+  type: LoadBalancer
+</span><span class="no">EOF
+</span></code></pre></div></div> <p>Confirm the deployment:</p> <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>kubectl get deploy,svc,ep tetris
+</code></pre></div></div> <p>Add annotation to <code class="language-plaintext highlighter-rouge">tetris</code> Service to attach a DNS record(hostname):</p> <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>kubectl annotate service tetris <span class="s2">"external-dns.alpha.kubernetes.io/hostname=tetris.</span><span class="nv">$MyDomain</span><span class="s2">"</span>
+<span class="k">while </span><span class="nb">true</span><span class="p">;</span> <span class="k">do </span>aws route53 list-resource-record-sets <span class="nt">--hosted-zone-id</span> <span class="s2">"</span><span class="k">${</span><span class="nv">MyDnzHostedZoneId</span><span class="k">}</span><span class="s2">"</span> <span class="nt">--query</span> <span class="s2">"ResourceRecordSets[?Type == 'A']"</span> | jq <span class="p">;</span> <span class="nb">date</span> <span class="p">;</span> <span class="nb">echo</span> <span class="p">;</span> <span class="nb">sleep </span>1<span class="p">;</span> <span class="k">done</span>
+</code></pre></div></div> <p>Check <code class="language-plaintext highlighter-rouge">A record</code> is generated in Route 53:</p> <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>aws route53 list-resource-record-sets <span class="nt">--hosted-zone-id</span> <span class="s2">"</span><span class="k">${</span><span class="nv">MyDnzHostedZoneId</span><span class="k">}</span><span class="s2">"</span> <span class="nt">--query</span> <span class="s2">"ResourceRecordSets[?Type == 'A']"</span> | jq
+</code></pre></div></div> <p>Confirm the access:</p> <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>dig +short tetris.<span class="nv">$MyDomain</span> @8.8.8.8
+dig +short tetris.<span class="nv">$MyDomain</span>
+
+<span class="nb">echo</span> <span class="nt">-e</span> <span class="s2">"My Domain Checker Site1 = https://www.whatsmydns.net/#A/tetris.</span><span class="nv">$MyDomain</span><span class="s2">"</span>
+<span class="nb">echo</span> <span class="nt">-e</span> <span class="s2">"My Domain Checker Site2 = https://dnschecker.org/#A/tetris.</span><span class="nv">$MyDomain</span><span class="s2">"</span>
+
+<span class="nb">echo</span> <span class="nt">-e</span> <span class="s2">"Tetris Game URL = http://tetris.</span><span class="nv">$MyDomain</span><span class="s2">"</span>
+</code></pre></div></div> <p>Remove resources. Note that <code class="language-plaintext highlighter-rouge">A record</code> is also deleted by <code class="language-plaintext highlighter-rouge">ExternalDNS</code> controller.</p> <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>kubectl delete deploy,svc tetris
+</code></pre></div></div> <h2 id="5-gateway-api">5. Gateway API</h2> <p>The <strong>Gateway API</strong> is the next-generation of Kubernetes ingress and service networking. It provides a more expressive, extensible, and role-oriented set of APIs (<code class="language-plaintext highlighter-rouge">GatewayClass</code>, <code class="language-plaintext highlighter-rouge">Gateway</code>, and <code class="language-plaintext highlighter-rouge">HTTPRoute</code>) compared to the standard Ingress resource. In EKS, the AWS Load Balancer Controller supports the Gateway API to provision ALBs and NLBs with advanced routing capabilities.</p> <h3 id="51-install-supporting-resources-to-use-gateway-api">5.1. Install supporting resources to use Gateway API</h3> <p>Make sure AWS LBC version is higher than v2.13.0:</p> <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>kubectl describe pod <span class="nt">-n</span> kube-system <span class="nt">-l</span> app.kubernetes.io/name<span class="o">=</span>aws-load-balancer-controller | <span class="nb">grep </span>Image: | <span class="nb">uniq
+    </span>Image:         public.ecr.aws/eks/aws-load-balancer-controller:v3.1.0
+</code></pre></div></div> <p>Install Gateway API CRDs:</p> <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>kubectl apply <span class="nt">-f</span> https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.3.0/standard-install.yaml     <span class="c"># [REQUIRED] # Standard Gateway API CRDs</span>
+kubectl apply <span class="nt">-f</span> https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.3.0/experimental-install.yaml <span class="c"># [OPTIONAL: Used for L4 Routes] # Experimental Gateway API CRDs</span>
+</code></pre></div></div> <p>Confirm the CRDs are installed:</p> <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>kubectl get crd  | <span class="nb">grep </span>gateway.networking
+backendtlspolicies.gateway.networking.k8s.io          2026-03-29T20:35:25Z
+gatewayclasses.gateway.networking.k8s.io              2026-03-29T20:34:59Z
+gateways.gateway.networking.k8s.io                    2026-03-29T20:34:59Z
+grpcroutes.gateway.networking.k8s.io                  2026-03-29T20:34:59Z
+httproutes.gateway.networking.k8s.io                  2026-03-29T20:35:00Z
+referencegrants.gateway.networking.k8s.io             2026-03-29T20:35:01Z
+tcproutes.gateway.networking.k8s.io                   2026-03-29T20:35:26Z
+tlsroutes.gateway.networking.k8s.io                   2026-03-29T20:35:27Z
+udproutes.gateway.networking.k8s.io                   2026-03-29T20:35:27Z
+xbackendtrafficpolicies.gateway.networking.x-k8s.io   2026-03-29T20:35:27Z
+xlistenersets.gateway.networking.x-k8s.io             2026-03-29T20:35:27Z
+
+kubectl api-resources | <span class="nb">grep </span>gateway.networking
+backendtlspolicies                  btlspolicy        gateway.networking.k8s.io/v1alpha3     <span class="nb">true         </span>BackendTLSPolicy
+gatewayclasses                      gc                gateway.networking.k8s.io/v1           <span class="nb">false        </span>GatewayClass
+gateways                            gtw               gateway.networking.k8s.io/v1           <span class="nb">true         </span>Gateway
+grpcroutes                                            gateway.networking.k8s.io/v1           <span class="nb">true         </span>GRPCRoute
+httproutes                                            gateway.networking.k8s.io/v1           <span class="nb">true         </span>HTTPRoute
+referencegrants                     refgrant          gateway.networking.k8s.io/v1beta1      <span class="nb">true         </span>ReferenceGrant
+tcproutes                                             gateway.networking.k8s.io/v1alpha2     <span class="nb">true         </span>TCPRoute
+tlsroutes                                             gateway.networking.k8s.io/v1alpha2     <span class="nb">true         </span>TLSRoute
+udproutes                                             gateway.networking.k8s.io/v1alpha2     <span class="nb">true         </span>UDPRoute
+xbackendtrafficpolicies             xbtrafficpolicy   gateway.networking.x-k8s.io/v1alpha1   <span class="nb">true         </span>XBackendTrafficPolicy
+xlistenersets                       lset              gateway.networking.x-k8s.io/v1alpha1   <span class="nb">true         </span>XListenerSet
+
+kubectl explain gatewayclasses.gateway.networking.k8s.io.spec
+kubectl explain gateways.gateway.networking.k8s.io.spec
+kubectl explain httproutes.gateway.networking.k8s.io.spec
+</code></pre></div></div> <p>Install LBC Gateway API specific CRDs:</p> <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>kubectl apply <span class="nt">-f</span> https://raw.githubusercontent.com/kubernetes-sigs/aws-load-balancer-controller/refs/heads/main/config/crd/gateway/gateway-crds.yaml
+</code></pre></div></div> <p>Confirm:</p> <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>kubectl get crd | <span class="nb">grep </span>gateway.k8s.aws
+listenerruleconfigurations.gateway.k8s.aws            2026-03-29T03:57:55Z
+loadbalancerconfigurations.gateway.k8s.aws            2026-03-29T03:57:55Z
+targetgroupconfigurations.gateway.k8s.aws             2026-03-29T03:57:55Z
+
+kubectl api-resources | <span class="nb">grep </span>gateway.k8s.aws
+listenerruleconfigurations                            gateway.k8s.aws/v1beta1                <span class="nb">true         </span>ListenerRuleConfiguration
+loadbalancerconfigurations                            gateway.k8s.aws/v1beta1                <span class="nb">true         </span>LoadBalancerConfiguration
+targetgroupconfigurations                             gateway.k8s.aws/v1beta1                <span class="nb">true         </span>TargetGroupConfiguration
+
+kubectl explain loadbalancerconfigurations.gateway.k8s.aws.spec
+kubectl explain listenerruleconfigurations.gateway.k8s.aws.spec
+kubectl explain targetgroupconfigurations.gateway.k8s.aws.spec
+</code></pre></div></div> <p>The current <code class="language-plaintext highlighter-rouge">aws-load-balancer-controller</code> is not configured to use Gateway API(required args are not set):</p> <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>helm list <span class="nt">-n</span> kube-system 
+helm get values <span class="nt">-n</span> kube-system aws-load-balancer-controller
+kubectl describe deploy <span class="nt">-n</span> kube-system aws-load-balancer-controller | <span class="nb">grep </span>Args: <span class="nt">-A2</span>
+    Args:
+      <span class="nt">--cluster-name</span><span class="o">=</span>myeks
+      <span class="nt">--ingress-class</span><span class="o">=</span>alb
+</code></pre></div></div> <p>Set monitoring:</p> <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>kubectl get pod <span class="nt">-n</span> kube-system <span class="nt">-l</span> app.kubernetes.io/name<span class="o">=</span>aws-load-balancer-controller <span class="nt">--watch</span>
+</code></pre></div></div> <p>Add a feature flag to enable Gateway API:</p> <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>kubectl edit deploy <span class="nt">-n</span> kube-system aws-load-balancer-controller
+...
+      - args:
+        - <span class="nt">--cluster-name</span><span class="o">=</span>myeks
+        - <span class="nt">--ingress-class</span><span class="o">=</span>alb
+        - <span class="nt">--feature-gates</span><span class="o">=</span><span class="nv">NLBGatewayAPI</span><span class="o">=</span><span class="nb">true</span>,ALBGatewayAPI<span class="o">=</span><span class="nb">true</span> <span class="c">##### add</span>
+...
+</code></pre></div></div> <p>Confirm:</p> <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>kubectl describe deploy <span class="nt">-n</span> kube-system aws-load-balancer-controller | <span class="nb">grep </span>Args: <span class="nt">-A3</span>
+    Args:
+      <span class="nt">--cluster-name</span><span class="o">=</span>myeks
+      <span class="nt">--ingress-class</span><span class="o">=</span>alb
+      <span class="nt">--feature-gates</span><span class="o">=</span><span class="nv">NLBGatewayAPI</span><span class="o">=</span><span class="nb">true</span>,ALBGatewayAPI<span class="o">=</span><span class="nb">true</span>
+</code></pre></div></div> <p>Add additional resources to watch in <code class="language-plaintext highlighter-rouge">external-dns-values.yaml</code> file:</p> <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nt">--------------------------</span>
+sources:
+  - service
+  - ingress
+  - gateway-httproute
+  - gateway-grpcroute
+  - gateway-tlsroute
+  - gateway-tcproute
+  - gateway-udproute
+<span class="nt">--------------------------</span>
+</code></pre></div></div> <p>Update <code class="language-plaintext highlighter-rouge">external-dns</code> controller:</p> <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># ExternalDNS 에 gateway api 지원 설정</span>
+helm upgrade <span class="nt">-i</span> external-dns external-dns/external-dns <span class="nt">-n</span> kube-system <span class="nt">-f</span> external-dns-values.yaml
+</code></pre></div></div> <p>Confirm:</p> <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>kubectl describe deploy <span class="nt">-n</span> kube-system external-dns | <span class="nb">grep </span>Args: <span class="nt">-A15</span>
+    Args:
+      <span class="nt">--log-level</span><span class="o">=</span>info
+      <span class="nt">--log-format</span><span class="o">=</span>text
+      <span class="nt">--interval</span><span class="o">=</span>1m
+      <span class="nt">--source</span><span class="o">=</span>service
+      <span class="nt">--source</span><span class="o">=</span>ingress
+      <span class="nt">--source</span><span class="o">=</span>gateway-httproute
+      <span class="nt">--source</span><span class="o">=</span>gateway-grpcroute
+      <span class="nt">--source</span><span class="o">=</span>gateway-tlsroute
+      <span class="nt">--source</span><span class="o">=</span>gateway-tcproute
+      <span class="nt">--source</span><span class="o">=</span>gateway-udproute
+      <span class="nt">--policy</span><span class="o">=</span><span class="nb">sync</span>
+      <span class="nt">--registry</span><span class="o">=</span>txt
+      <span class="nt">--txt-owner-id</span><span class="o">=</span>stduy-myeks-cluster
+      <span class="nt">--domain-filter</span><span class="o">=</span>gasida.link
+      <span class="nt">--provider</span><span class="o">=</span>aws
+</code></pre></div></div> <h3 id="42-deploy-a-sample-service">4.2. Deploy a sample service</h3> <figure> <picture> <img src="/assets/img/eks/05-networking-lab-3/gateway-full.png" class="img-fluid rounded z-depth-1" width="auto" height="auto" data-zoomable="" onerror="this.onerror=null; $('.responsive-img-srcset').remove();"> </picture> </figure> <blockquote> <p>Please refer to <a href="https://kubernetes-sigs.github.io/aws-load-balancer-controller/latest/guide/gateway/customization/" rel="external nofollow noopener" target="_blank">How customizations works</a> page in the AWS Load Balancer Controller official doc.</p> </blockquote> <p>Create <code class="language-plaintext highlighter-rouge">LoadBalancerConfiguration</code>:</p> <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>kubectl explain loadbalancerconfigurations.gateway.k8s.aws.spec
+...
+  scheme        &lt;string&gt;
+  enum: internal, internet-facing
+    scheme defines the <span class="nb">type </span>of LB to provision. If unspecified, it will be
+    automatically inferred.
+...
+
+<span class="nb">cat</span> <span class="o">&lt;&lt;</span> <span class="no">EOF</span><span class="sh"> | kubectl apply -f -
+apiVersion: gateway.k8s.aws/v1beta1
+kind: LoadBalancerConfiguration
+metadata:
+  name: lbc-config
+  namespace: default
+spec:
+  scheme: internet-facing
+</span><span class="no">EOF
+</span></code></pre></div></div> <p>Confirm:</p> <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>kubectl get loadbalancerconfiguration <span class="nt">-owide</span>
+NAME         AGE
+lbc-config   8s
+</code></pre></div></div> <p>Deploy <code class="language-plaintext highlighter-rouge">GatewayClass</code>:</p> <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>kubectl explain gatewayclasses.spec
+kubectl explain gatewayclasses.spec.parametersRef
+<span class="nb">cat</span> <span class="o">&lt;&lt;</span> <span class="no">EOF</span><span class="sh"> | kubectl apply -f -
+apiVersion: gateway.networking.k8s.io/v1
+kind: GatewayClass
+metadata:
+  name: aws-alb
+spec:
+  controllerName: gateway.k8s.aws/alb
+  parametersRef:
+    group: gateway.k8s.aws
+    kind: LoadBalancerConfiguration
+    name: lbc-config
+    namespace: default
+</span><span class="no">EOF
+
+</span><span class="c"># confirm</span>
+kubectl get gatewayclasses <span class="nt">-o</span> wide  <span class="c"># k get gc</span>
+NAME      CONTROLLER            ACCEPTED   AGE   DESCRIPTION
+aws-alb   gateway.k8s.aws/alb   True       63s
+</code></pre></div></div> <p>Deploy <code class="language-plaintext highlighter-rouge">Gateway</code>:</p> <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>kubectl explain gateways.spec
+<span class="nb">cat</span> <span class="o">&lt;&lt;</span> <span class="no">EOF</span><span class="sh"> | kubectl apply -f -
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: alb-http
+spec:
+  gatewayClassName: aws-alb
+  listeners:
+  - name: http
+    protocol: HTTP
+    port: 80
+</span><span class="no">EOF
+
+</span><span class="c"># confirm gateways</span>
+kubectl get gateways
+NAME       CLASS     ADDRESS                                                                     PROGRAMMED   AGE
+alb-http   aws-alb   k8s-default-albhttp-8d7d6da11f-126923743.ap-northeast-2.elb.amazonaws.com   Unknown      24s
+
+<span class="c"># confirm ALB is created</span>
+aws elbv2 describe-load-balancers | jq 
+aws elbv2 describe-target-groups
+
+<span class="c"># log monitoring</span>
+kubectl logs <span class="nt">-l</span> app.kubernetes.io/name<span class="o">=</span>aws-load-balancer-controller <span class="nt">-n</span> kube-system <span class="nt">-f</span>
+kubectl stern <span class="nt">-l</span> app.kubernetes.io/name<span class="o">=</span>aws-load-balancer-controller <span class="nt">-n</span> kube-system
+</code></pre></div></div> <p>Deploy the sample app:</p> <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">cat</span> <span class="o">&lt;&lt;</span><span class="no">EOF</span><span class="sh"> | kubectl apply -f -
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: deployment-2048
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: app-2048
+  replicas: 2
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: app-2048
+    spec:
+      containers:
+      - image: public.ecr.aws/l6m2t8p7/docker-2048:latest
+        imagePullPolicy: Always
+        name: app-2048
+        ports:
+        - containerPort: 80
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: service-2048
+spec:
+  ports:
+    - port: 80
+      targetPort: 80
+      protocol: TCP
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: app-2048
+</span><span class="no">EOF
+
+</span><span class="c"># confirm</span>
+kubectl get svc,ep,pod
+</code></pre></div></div> <p>Create <code class="language-plaintext highlighter-rouge">HTTPRoute</code>:</p> <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nv">GWMYDOMAIN</span><span class="o">={</span>gwapi.mydomain.com<span class="o">}</span>
+
+<span class="c"># httproute 생성</span>
+kubectl explain httproutes.spec
+kubectl explain httproutes.spec.parentRefs
+kubectl explain httproutes.spec.hostnames
+kubectl explain httproutes.spec.rules
+
+<span class="nb">cat</span> <span class="o">&lt;&lt;</span> <span class="no">EOF</span><span class="sh"> | kubectl apply -f -
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: alb-http-route
+spec:
+  parentRefs:
+  - group: gateway.networking.k8s.io
+    kind: Gateway
+    name: alb-http
+    sectionName: http
+  hostnames:
+  - </span><span class="nv">$GWMYDOMAIN</span><span class="sh">
+  rules:
+  - backendRefs:
+    - name: service-2048
+      port: 80
+</span><span class="no">EOF
+
+</span><span class="c"># confirm</span>
+kubectl get httproute       
+
+<span class="c"># ALB</span>
+aws elbv2 describe-load-balancers | jq 
+aws elbv2 describe-target-groups | jq
+
+<span class="c"># log</span>
+kubectl logs <span class="nt">-l</span> app.kubernetes.io/name<span class="o">=</span>aws-load-balancer-controller <span class="nt">-n</span> kube-system <span class="nt">-f</span>
+kubectl stern <span class="nt">-l</span> app.kubernetes.io/name<span class="o">=</span>aws-load-balancer-controller <span class="nt">-n</span> kube-system
+</code></pre></div></div> <p>Access test:</p> <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>dig +short <span class="nv">$GWMYDOMAIN</span> @8.8.8.8
+dig +short <span class="nv">$GWMYDOMAIN</span>
+
+<span class="c"># domain check</span>
+<span class="nb">echo</span> <span class="nt">-e</span> <span class="s2">"My Domain Checker Site1 = https://www.whatsmydns.net/#A/</span><span class="nv">$GWMYDOMAIN</span><span class="s2">"</span>
+<span class="nb">echo</span> <span class="nt">-e</span> <span class="s2">"My Domain Checker Site2 = https://dnschecker.org/#A/</span><span class="nv">$GWMYDOMAIN</span><span class="s2">"</span>
+
+<span class="nb">echo</span> <span class="nt">-e</span> <span class="s2">"GW Api Sample URL = http://</span><span class="nv">$GWMYDOMAIN</span><span class="s2">"</span>
+</code></pre></div></div> <p>Remove resources:</p> <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>kubectl delete httproute,targetgroupconfigurations,Gateway,GatewayClass <span class="nt">--all</span>
+</code></pre></div></div> <h2 id="5-clean-up-deployed-resources">5. Clean Up Deployed Resources</h2> <p>Remove IRSA:</p> <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nv">CLUSTER_NAME</span><span class="o">=</span>myeks
+eksctl delete iamserviceaccount <span class="nt">--cluster</span><span class="o">=</span><span class="nv">$CLUSTER_NAME</span> <span class="nt">--namespace</span><span class="o">=</span>kube-system <span class="nt">--name</span><span class="o">=</span>external-dns
+eksctl delete iamserviceaccount <span class="nt">--cluster</span><span class="o">=</span><span class="nv">$CLUSTER_NAME</span> <span class="nt">--namespace</span><span class="o">=</span>kube-system <span class="nt">--name</span><span class="o">=</span>aws-load-balancer-controller
+
+<span class="c"># confirm</span>
+eksctl get iamserviceaccount <span class="nt">--cluster</span> <span class="nv">$CLUSTER_NAME</span>
+</code></pre></div></div> <p>Remove AWS infra deployed by terraform:</p> <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>terraform destroy <span class="nt">-auto-approve</span> <span class="o">&amp;&amp;</span> <span class="nb">rm</span> <span class="nt">-rf</span> ~/.kube/config
+</code></pre></div></div> </d-article> <d-appendix> <d-footnote-list></d-footnote-list> <d-citation-list></d-citation-list> </d-appendix> <d-bibliography src="/assets/bibliography/"></d-bibliography><div id="giscus_thread" style="max-width: 800px; margin: 0 auto;"> <script>let giscusTheme=localStorage.getItem("theme"),giscusAttributes={src:"https://giscus.app/client.js","data-repo":"alshedivat/al-folio","data-repo-id":"MDEwOlJlcG9zaXRvcnk2MDAyNDM2NQ==","data-category":"Comments","data-category-id":"DIC_kwDOA5PmLc4CTBt6","data-mapping":"title","data-strict":"1","data-reactions-enabled":"1","data-emit-metadata":"0","data-input-position":"bottom","data-theme":giscusTheme,"data-lang":"en",crossorigin:"anonymous",async:""},giscusScript=document.createElement("script");Object.entries(giscusAttributes).forEach(([t,a])=>giscusScript.setAttribute(t,a)),document.getElementById("giscus_thread").appendChild(giscusScript);</script> <noscript>Please enable JavaScript to view the <a href="http://giscus.app/?ref_noscript" rel="external nofollow noopener" target="_blank">comments powered by giscus.</a> </noscript> </div> </div> <footer class="fixed-bottom"> <div class="container mt-0"> © Copyright 2026 Seyoung Nam. Powered by <a href="https://jekyllrb.com/" target="_blank" rel="external nofollow noopener">Jekyll</a> with <a href="https://github.com/alshedivat/al-folio" rel="external nofollow noopener" target="_blank">al-folio</a> theme. Hosted by <a href="https://pages.github.com/" target="_blank" rel="external nofollow noopener">GitHub Pages</a>. Photos from <a href="https://unsplash.com" target="_blank" rel="external nofollow noopener">Unsplash</a>. </div> </footer> <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.1/dist/js/bootstrap.bundle.min.js" integrity="sha256-fgLAgv7fyCGopR/gBNq2iW3ZKIdqIcyshnUULC4vex8=" crossorigin="anonymous"></script> <script src="https://cdn.jsdelivr.net/npm/mdbootstrap@4.20.0/js/mdb.min.js" integrity="sha256-NdbiivsvWt7VYCt6hYNT3h/th9vSTL4EDWeGs5SN3DA=" crossorigin="anonymous"></script> <script defer type="text/javascript" src="https://cdn.jsdelivr.net/npm/mermaid@10.9.1/dist/mermaid.min.js"></script> <script>document.addEventListener("DOMContentLoaded",function(){document.querySelectorAll("pre code.language-mermaid").forEach(function(e){let t=e.parentElement,n=document.createElement("div");n.classList.add("mermaid"),n.textContent=e.textContent,t.parentElement.replaceChild(n,t)}),mermaid.initialize({startOnLoad:!0,theme:"dark"===document.documentElement.getAttribute("data-theme")?"dark":"default"})});</script> <script defer src="https://cdn.jsdelivr.net/npm/medium-zoom@1.0.6/dist/medium-zoom.min.js" integrity="sha256-EdPgYcPk/IIrw7FYeuJQexva49pVRZNmt3LculEr7zM=" crossorigin="anonymous"></script> <script defer src="/assets/js/zoom.js"></script> <script defer src="/assets/js/common.js"></script> <script type="text/javascript">function progressBarSetup(){"max"in document.createElement("progress")?(initializeProgressElement(),$(document).on("scroll",function(){progressBar.attr({value:getCurrentScrollPosition()})}),$(window).on("resize",initializeProgressElement)):(resizeProgressBar(),$(document).on("scroll",resizeProgressBar),$(window).on("resize",resizeProgressBar))}function getCurrentScrollPosition(){return $(window).scrollTop()}function initializeProgressElement(){let e=$("#navbar").outerHeight(!0);$("body").css({"padding-top":e}),$("progress-container").css({"padding-top":e}),progressBar.css({top:e}),progressBar.attr({max:getDistanceToScroll(),value:getCurrentScrollPosition()})}function getDistanceToScroll(){return $(document).height()-$(window).height()}function resizeProgressBar(){progressBar.css({width:getWidthPercentage()+"%"})}function getWidthPercentage(){return getCurrentScrollPosition()/getDistanceToScroll()*100}const progressBar=$("#progress");window.onload=function(){setTimeout(progressBarSetup,50)};</script> </body> </html>

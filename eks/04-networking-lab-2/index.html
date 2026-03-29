@@ -1,0 +1,328 @@
+<!DOCTYPE html> <html> <head> <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"> <meta charset="utf-8"> <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no"> <meta http-equiv="X-UA-Compatible" content="IE=edge"> <title>04 EKS Networking Lab: Scaling Pod IPs with VPC CNI | Seyoung Nam</title> <meta name="author" content="Seyoung Nam"> <meta name="description" content="This page is the personal study note and codebase written during the EKS group study led by Jongho S."> <meta name="keywords" content="jekyll, jekyll-theme, academic-website, portfolio-website"> <link href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.1/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha256-DF7Zhf293AJxJNTmh5zhoYYIMs2oXitRfBjY+9L//AY=" crossorigin="anonymous"> <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/mdbootstrap@4.20.0/css/mdb.min.css" integrity="sha256-jpjYvU3G3N6nrrBwXJoVEYI/0zw8htfFnhT9ljN3JJw=" crossorigin="anonymous"> <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@5.15.4/css/all.min.css" integrity="sha256-mUZM63G8m73Mcidfrv5E+Y61y7a12O5mW4ezU3bxqW4=" crossorigin="anonymous"> <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/academicons@1.9.1/css/academicons.min.css" integrity="sha256-i1+4qU2G2860dGGIOJscdC30s9beBXjFfzjWLjBRsBg=" crossorigin="anonymous"> <link rel="stylesheet" type="text/css" href="https://fonts.googleapis.com/css?family=Roboto:300,400,500,700|Roboto+Slab:100,300,400,500,700|Material+Icons"> <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/jwarby/jekyll-pygments-themes@master/github.css" media="" id="highlight_theme_light"> <link rel="shortcut icon" href="data:image/svg+xml,&lt;svg%20xmlns=%22http://www.w3.org/2000/svg%22%20viewBox=%220%200%20100%20100%22&gt;&lt;text%20y=%22.9em%22%20font-size=%2290%22&gt;%E2%9A%9B%EF%B8%8F&lt;/text&gt;&lt;/svg&gt;"> <link rel="stylesheet" href="/assets/css/main.css"> <link rel="canonical" href="https://seyoungnam.github.io/eks/04-networking-lab-2/"> <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/jwarby/jekyll-pygments-themes@master/native.css" media="none" id="highlight_theme_dark"> <script src="/assets/js/theme.js"></script> <script src="/assets/js/dark_mode.js"></script> <script src="https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js" integrity="sha256-/xUj+3OJU5yExlq6GSYGSHk7tPXikynS7ogEvDej/m4=" crossorigin="anonymous"></script> <script type="text/javascript">window.MathJax={tex:{tags:"ams"}};</script> <script defer type="text/javascript" id="MathJax-script" src="https://cdn.jsdelivr.net/npm/mathjax@3.2.0/es5/tex-mml-chtml.js"></script> <script defer src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script> <script src="/assets/js/distillpub/template.v2.js"></script> <script src="/assets/js/distillpub/transforms.v2.js"></script> <script src="/assets/js/distillpub/overrides.js"></script> </head> <body> <d-front-matter> <script async type="text/json">{
+      "title": "04 EKS Networking Lab: Scaling Pod IPs with VPC CNI",
+      "description": "This page is the personal study note and codebase written during the EKS group study led by Jongho S.",
+      "published": "March 26, 2026",
+      "authors": [
+        {
+          "author": "Seyoung Nam",
+          "authorURL": "https://www.linkedin.com/in/seyoungnam/",
+          "affiliations": [
+            {
+              "name": "",
+              "url": ""
+            }
+          ]
+        },
+        {
+          "author": "Jongho S.",
+          "authorURL": "https://www.linkedin.com/in/gasida99/",
+          "affiliations": [
+            {
+              "name": "",
+              "url": ""
+            }
+          ]
+        }
+        
+      ],
+      "katex": {
+        "delimiters": [
+          {
+            "left": "$",
+            "right": "$",
+            "display": false
+          },
+          {
+            "left": "$$",
+            "right": "$$",
+            "display": true
+          }
+        ]
+      }
+    }</script> </d-front-matter> <header> <nav id="navbar" class="navbar navbar-light navbar-expand-sm fixed-top"> <div class="container"> <a class="navbar-brand title font-weight-lighter" href="/"><span class="font-weight-bold">Seyoung </span>Nam</a> <button class="navbar-toggler collapsed ml-auto" type="button" data-toggle="collapse" data-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation"> <span class="sr-only">Toggle navigation</span> <span class="icon-bar top-bar"></span> <span class="icon-bar middle-bar"></span> <span class="icon-bar bottom-bar"></span> </button> <div class="collapse navbar-collapse text-right" id="navbarNav"> <ul class="navbar-nav ml-auto flex-nowrap"> <li class="nav-item "> <a class="nav-link" href="/">about</a> </li> <li class="nav-item "> <a class="nav-link" href="/blog/">blog</a> </li> <li class="nav-item dropdown "> <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">technology</a> <div class="dropdown-menu dropdown-menu-right" aria-labelledby="navbarDropdown"> <a class="dropdown-item" href="/go/">Golang</a> <div class="dropdown-divider"></div> <a class="dropdown-item" href="/k8s/">Kubernetes</a> <div class="dropdown-divider"></div> <a class="dropdown-item" href="/istio/">Istio</a> <div class="dropdown-divider"></div> <a class="dropdown-item" href="/eks/">EKS</a> <div class="dropdown-divider"></div> <a class="dropdown-item" href="/network/">Network</a> </div> </li> <li class="nav-item dropdown "> <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">algorithms</a> <div class="dropdown-menu dropdown-menu-right" aria-labelledby="navbarDropdown"> <a class="dropdown-item" href="/leetcode/">LeetCode</a> <div class="dropdown-divider"></div> <a class="dropdown-item" href="/algoexpert/">AlgoExpert</a> </div> </li> <li class="nav-item "> <a class="nav-link" href="/projects/">projects</a> </li> <li class="nav-item "> <a class="nav-link" href="/repositories/">repositories</a> </li> <li class="toggle-container"> <button id="light-toggle" title="Change theme"> <i class="fas fa-moon"></i> <i class="fas fa-sun"></i> </button> </li> </ul> </div> </div> </nav> <progress id="progress" value="0"> <div class="progress-container"> <span class="progress-bar"></span> </div> </progress> </header> <div class="post distill"> <d-title> <h1>04 EKS Networking Lab: Scaling Pod IPs with VPC CNI</h1> <p>This page is the personal study note and codebase written during the EKS group study led by Jongho S.</p> </d-title> <d-byline></d-byline> <d-article> <d-contents> <nav class="l-text figcaption"> <h3>Contents</h3> <div><a href="#1-aws-vpc-cni-configuration-change">1. AWS VPC CNI Configuration Change</a></div> <div><a href="#2-pod-count-constraints-on-node">2. Pod Count Constraints on Node</a></div> <ul> <li><a href="#2-1-pod-count-constraints-for-t3-medium-instance-type">2.1. Pod Count Constraints for t3.medium Instance Type</a></li> <li><a href="#2-2-pod-count-constraints-for-other-instance-type">2.2. Pod Count Constraints for Other Instance Type</a></li> <li><a href="#2-3-lab-deploy-max-pods-default-eni-based">2.3. Lab - Deploy max pods (Default ENI-based)</a></li> <li><a href="#2-4-lab-deploy-max-pods-managed-node-group-enforcement">2.4. Lab - Deploy max pods (managed node group enforcement)</a></li> </ul> </nav> </d-contents> <blockquote> <p>This lab is the continuation of <strong>03 EKS Networking Lab: Routing and Interfaces</strong>. You need to provision an EKS cluster by following the instruction described <a href="/eks/03-networking-lab.md">here</a>.</p> </blockquote> <h2 id="1-aws-vpc-cni-configuration-change">1. AWS VPC CNI Configuration Change</h2> <p>Check the current environment of <code class="language-plaintext highlighter-rouge">aws-node</code> DaemonSet:</p> <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>kubectl get ds aws-node <span class="nt">-n</span> kube-system <span class="nt">-o</span> json | jq <span class="s1">'.spec.template.spec.containers[0].env'</span>
+...
+  <span class="o">{</span>
+    <span class="s2">"name"</span>: <span class="s2">"WARM_ENI_TARGET"</span>,
+    <span class="s2">"value"</span>: <span class="s2">"1"</span>
+  <span class="o">}</span>,
+...
+</code></pre></div></div> <p>Turn off <code class="language-plaintext highlighter-rouge">WARM_ENI_TARGET</code> and turn on <code class="language-plaintext highlighter-rouge">WARM_IP_TARGET</code> and <code class="language-plaintext highlighter-rouge">MINIMUM_IP_TARGET</code> in <code class="language-plaintext highlighter-rouge">eks.tf</code>:</p> <div class="language-tf highlighter-rouge"><div class="highlight"><pre class="highlight"><code>  <span class="nx">addons</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="nx">coredns</span> <span class="o">=</span> <span class="p">{</span>
+      <span class="nx">most_recent</span> <span class="o">=</span> <span class="kc">true</span>
+    <span class="p">}</span>
+    <span class="nx">kube-proxy</span> <span class="o">=</span> <span class="p">{</span>
+      <span class="nx">most_recent</span> <span class="o">=</span> <span class="kc">true</span>
+    <span class="p">}</span>
+    <span class="nx">vpc-cni</span> <span class="o">=</span> <span class="p">{</span>
+      <span class="nx">most_recent</span> <span class="o">=</span> <span class="kc">true</span>
+      <span class="nx">before_compute</span> <span class="o">=</span> <span class="kc">true</span>
+      <span class="nx">configuration_values</span> <span class="o">=</span> <span class="nx">jsonencode</span><span class="p">({</span>
+        <span class="nx">env</span> <span class="o">=</span> <span class="p">{</span>
+          <span class="c1"># WARM_ENI_TARGET = "1" # 현재 ENI 외에 여유 ENI 1개를 항상 확보</span>
+          <span class="nx">WARM_IP_TARGET</span>  <span class="o">=</span> <span class="s2">"5"</span> <span class="c1"># 현재 사용 중인 IP 외에 여유 IP 5개를 항상 유지, 설정 시 WARM_ENI_TARGET 무시됨</span>
+          <span class="nx">MINIMUM_IP_TARGET</span>   <span class="o">=</span> <span class="s2">"10"</span> <span class="c1"># 노드 시작 시 최소 확보해야 할 IP 총량 10개</span>
+          <span class="c1">#ENABLE_PREFIX_DELEGATION = "true" </span>
+          <span class="c1">#WARM_PREFIX_TARGET = "1" # PREFIX_DELEGATION 사용 시, 1개의 여유 대역(/28) 유지</span>
+        <span class="p">}</span>
+      <span class="p">})</span>
+    <span class="p">}</span>
+  <span class="p">}</span>
+</code></pre></div></div> <p>Terraform apply:</p> <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>terraform plan
+terraform apply <span class="nt">-auto-approve</span>
+</code></pre></div></div> <p>Confirm the changes in the console: EKS &gt; addon &gt; vpc-cni</p> <figure> <picture> <img src="/assets/img/eks/04-networking-lab-2/vpc-cni.png" class="img-fluid rounded z-depth-1" width="auto" height="auto" data-zoomable="" onerror="this.onerror=null; $('.responsive-img-srcset').remove();"> </picture> </figure> <p>Check <code class="language-plaintext highlighter-rouge">env</code> in <code class="language-plaintext highlighter-rouge">aws-node</code> DaemonSet:</p> <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>kubectl get ds aws-node <span class="nt">-n</span> kube-system <span class="nt">-o</span> json | jq <span class="s1">'.spec.template.spec.containers[0].env'</span>
+kubectl describe ds aws-node <span class="nt">-n</span> kube-system | <span class="nb">grep</span> <span class="nt">-E</span> <span class="s2">"WARM_IP_TARGET|MINIMUM_IP_TARGET"</span>
+</code></pre></div></div> <p>Confirm ENI is added to the node where no pods are scheduled. You can see that every node has both <code class="language-plaintext highlighter-rouge">ens5</code> and <code class="language-plaintext highlighter-rouge">ens6</code> network interface. Please refer to <a href="/eks/03-networking-lab/#41-variable-setting">4.1. Variable setting</a> to secloud-native-aws-vpc-ct <code class="language-plaintext highlighter-rouge">N1</code>, <code class="language-plaintext highlighter-rouge">N2</code>, <code class="language-plaintext highlighter-rouge">N3</code> variables.</p> <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">for </span>i <span class="k">in</span> <span class="nv">$N1</span> <span class="nv">$N2</span> <span class="nv">$N3</span><span class="p">;</span> <span class="k">do </span><span class="nb">echo</span> <span class="s2">"&gt;&gt; node </span><span class="nv">$i</span><span class="s2"> &lt;&lt;"</span><span class="p">;</span> ssh ec2-user@<span class="nv">$i</span> <span class="nb">sudo </span>ip <span class="nt">-c</span> addr<span class="p">;</span> <span class="nb">echo</span><span class="p">;</span> <span class="k">done</span>
+</code></pre></div></div> <p>That’s because of the <code class="language-plaintext highlighter-rouge">MINIMUM_IP_TARGET = "10"</code>. Note that five secondary IP addresses are allocated per ENI in a warm pool.</p> <figure> <picture> <img src="/assets/img/eks/04-networking-lab-2/secondary-ips.png" class="img-fluid rounded z-depth-1" width="auto" height="auto" data-zoomable="" onerror="this.onerror=null; $('.responsive-img-srcset').remove();"> </picture> </figure> <p>Check cni logs:</p> <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">for </span>i <span class="k">in</span> <span class="nv">$N1</span> <span class="nv">$N2</span> <span class="nv">$N3</span><span class="p">;</span> <span class="k">do </span><span class="nb">echo</span> <span class="s2">"&gt;&gt; node </span><span class="nv">$i</span><span class="s2"> &lt;&lt;"</span><span class="p">;</span> ssh ec2-user@<span class="nv">$i</span> tree /var/log/aws-routed-eni <span class="p">;</span> <span class="nb">echo</span><span class="p">;</span> <span class="k">done
+for </span>i <span class="k">in</span> <span class="nv">$N1</span> <span class="nv">$N2</span> <span class="nv">$N3</span><span class="p">;</span> <span class="k">do </span><span class="nb">echo</span> <span class="s2">"&gt;&gt; node </span><span class="nv">$i</span><span class="s2"> &lt;&lt;"</span><span class="p">;</span> ssh ec2-user@<span class="nv">$i</span> <span class="nb">sudo cat</span> /var/log/aws-routed-eni/plugin.log | jq <span class="p">;</span> <span class="nb">echo</span><span class="p">;</span> <span class="k">done
+for </span>i <span class="k">in</span> <span class="nv">$N1</span> <span class="nv">$N2</span> <span class="nv">$N3</span><span class="p">;</span> <span class="k">do </span><span class="nb">echo</span> <span class="s2">"&gt;&gt; node </span><span class="nv">$i</span><span class="s2"> &lt;&lt;"</span><span class="p">;</span> ssh ec2-user@<span class="nv">$i</span> <span class="nb">sudo cat</span> /var/log/aws-routed-eni/ipamd.log | jq <span class="p">;</span> <span class="nb">echo</span><span class="p">;</span> <span class="k">done</span>
+
+<span class="c"># IpamD debugging commands  https://github.com/aws/amazon-vpc-cni-k8s/blob/master/docs/troubleshooting.md</span>
+<span class="k">for </span>i <span class="k">in</span> <span class="nv">$N1</span> <span class="nv">$N2</span> <span class="nv">$N3</span><span class="p">;</span> <span class="k">do </span><span class="nb">echo</span> <span class="s2">"&gt;&gt; node </span><span class="nv">$i</span><span class="s2"> &lt;&lt;"</span><span class="p">;</span> ssh ec2-user@<span class="nv">$i</span> curl <span class="nt">-s</span> http://localhost:61679/v1/enis | jq<span class="p">;</span> <span class="nb">echo</span><span class="p">;</span> <span class="k">done</span>
+</code></pre></div></div> <h2 id="2-pod-count-constraints-on-node">2. Pod Count Constraints on Node</h2> <p>Install <code class="language-plaintext highlighter-rouge">kube-ops-view</code>:</p> <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>helm repo add geek-cookbook https://geek-cookbook.github.io/charts/
+helm <span class="nb">install </span>kube-ops-view geek-cookbook/kube-ops-view <span class="nt">--version</span> 1.2.2 <span class="nt">--set</span> service.main.type<span class="o">=</span>NodePort,service.main.ports.http.nodePort<span class="o">=</span>30000 <span class="nt">--set</span> env.TZ<span class="o">=</span><span class="s2">"America/New_York"</span> <span class="nt">--namespace</span> kube-system
+</code></pre></div></div> <p>Confirm the <code class="language-plaintext highlighter-rouge">kube-ops-view</code> deployment:</p> <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>kubectl get deploy,pod,svc,ep <span class="nt">-n</span> kube-system <span class="nt">-l</span> app.kubernetes.io/instance<span class="o">=</span>kube-ops-view
+</code></pre></div></div> <p>Load the webpage:</p> <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>open <span class="s2">"http://</span><span class="nv">$N1</span><span class="s2">:30000/#scale=1.5"</span>
+open <span class="s2">"http://</span><span class="nv">$N1</span><span class="s2">:30000/#scale=1.3"</span>
+</code></pre></div></div> <figure> <picture> <img src="/assets/img/eks/04-networking-lab-2/kube-ops-view.png" class="img-fluid rounded z-depth-1" width="auto" height="auto" data-zoomable="" onerror="this.onerror=null; $('.responsive-img-srcset').remove();"> </picture> </figure> <h3 id="21-pod-count-constraints-for-t3medium-instance-type">2.1. Pod Count Constraints for <code class="language-plaintext highlighter-rouge">t3.medium</code> Instance Type</h3> <p>The max pod count is determined by <strong>max ENI count per instance type</strong> and <strong>max secondary IP count per ENI</strong>. the max pod count can be calculated with the following:</p> <p><code class="language-plaintext highlighter-rouge">(Number of network interfaces for the instance type) X (Number of IPs per network interface - 1) + 2</code></p> <p>Note:</p> <ul> <li>The reason <strong>one is subtracted from the number of IPs per network interface</strong> is one IP address should be allocated to the network interface.</li> <li>The reason <strong>two is added</strong> is for taking <code class="language-plaintext highlighter-rouge">aws-node</code> and <code class="language-plaintext highlighter-rouge">kube-proxy</code> pods into the calculation. They are using the host IP address, not requiring a new IP address.</li> </ul> <figure> <picture> <img src="/assets/img/eks/04-networking-lab-2/max-pod-count.jpeg" class="img-fluid rounded z-depth-1" width="auto" height="auto" data-zoomable="" onerror="this.onerror=null; $('.responsive-img-srcset').remove();"> </picture> </figure> <p>Taking <code class="language-plaintext highlighter-rouge">t3.medium</code> as an example:</p> <ul> <li>Number of network interfaces for the instance type = 3</li> <li>Number of secondary IPs per network interface = 6</li> <li>Max pod count = 3 x (6 - 1) + 2 = 17</li> </ul> <p>Confirm the max allocatable pod count:</p> <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>kubectl describe node | <span class="nb">grep </span>Allocatable: <span class="nt">-A6</span>
+Allocatable:
+  cpu:                1930m
+  ephemeral-storage:  18181869946
+  hugepages-1Gi:      0
+  hugepages-2Mi:      0
+  memory:             3371436Ki
+  pods:               17
+</code></pre></div></div> <h3 id="22-pod-count-constraints-for-other-instance-type">2.2. Pod Count Constraints for Other Instance Type</h3> <p>Check <code class="language-plaintext highlighter-rouge">t3</code> instance types:</p> <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>aws ec2 describe-instance-types <span class="nt">--filters</span> <span class="nv">Name</span><span class="o">=</span>instance-type,Values<span class="o">=</span>t3.<span class="se">\*</span> <span class="se">\</span>
+ <span class="nt">--query</span> <span class="s2">"InstanceTypes[].{Type: InstanceType, MaxENI: NetworkInfo.MaximumNetworkInterfaces, IPv4addr: NetworkInfo.Ipv4AddressesPerInterface}"</span> <span class="se">\</span>
+ <span class="nt">--output</span> table
+
+ <span class="nt">--------------------------------------</span>
+|        DescribeInstanceTypes       |
++----------+----------+--------------+
+| IPv4addr | MaxENI   |    Type      |
++----------+----------+--------------+
+|  15      |  4       |  t3.2xlarge  |
+|  15      |  4       |  t3.xlarge   |
+|  6       |  3       |  t3.medium   |
+|  12      |  3       |  t3.large    |
+|  2       |  2       |  t3.micro    |
+|  2       |  2       |  t3.nano     |
+|  4       |  3       |  t3.small    |
++----------+----------+--------------+
+</code></pre></div></div> <p>Check <code class="language-plaintext highlighter-rouge">c5</code> instance types:</p> <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>aws ec2 describe-instance-types <span class="nt">--filters</span> <span class="nv">Name</span><span class="o">=</span>instance-type,Values<span class="o">=</span>c5<span class="se">\*</span>.<span class="se">\*</span> <span class="se">\</span>
+ <span class="nt">--query</span> <span class="s2">"InstanceTypes[].{Type: InstanceType, MaxENI: NetworkInfo.MaximumNetworkInterfaces, IPv4addr: NetworkInfo.Ipv4AddressesPerInterface}"</span> <span class="se">\</span>
+ <span class="nt">--output</span> table
+
+<span class="nt">-----------------------------------------</span>
+|         DescribeInstanceTypes         |
++----------+----------+-----------------+
+| IPv4addr | MaxENI   |      Type       |
++----------+----------+-----------------+
+|  50      |  15      |  c5ad.24xlarge  |
+|  10      |  3       |  c5d.large      |
+|  15      |  4       |  c5n.2xlarge    |
+|  30      |  8       |  c5ad.4xlarge   |
+... 
+</code></pre></div></div> <h3 id="23-lab---deploy-max-pods-default-eni-based">2.3. Lab - Deploy max pods (Default ENI-based)</h3> <p><a href="https://docs.aws.amazon.com/eks/latest/userguide/choosing-instance-type.html#max-pods-precedence" rel="external nofollow noopener" target="_blank">How maxPods is determined</a> introduces the order of precedence for <code class="language-plaintext highlighter-rouge">maxPods</code>. In this lab, we are attempting to confirm <strong>Default ENI-based calculation</strong>. Open your terminal on each node and run <code class="language-plaintext highlighter-rouge">ip addr show</code> command:</p> <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>ssh ec2-user@<span class="nv">$N1</span>
+<span class="k">while </span><span class="nb">true</span><span class="p">;</span> <span class="k">do </span>ip <span class="nt">-br</span> <span class="nt">-c</span> addr show <span class="o">&amp;&amp;</span> <span class="nb">echo</span> <span class="s2">"--------------"</span> <span class="p">;</span> <span class="nb">date</span> <span class="s2">"+%Y-%m-%d %H:%M:%S"</span> <span class="p">;</span> <span class="nb">sleep </span>1<span class="p">;</span> <span class="k">done
+
+</span>ssh ec2-user@<span class="nv">$N2</span>
+<span class="k">while </span><span class="nb">true</span><span class="p">;</span> <span class="k">do </span>ip <span class="nt">-br</span> <span class="nt">-c</span> addr show <span class="o">&amp;&amp;</span> <span class="nb">echo</span> <span class="s2">"--------------"</span> <span class="p">;</span> <span class="nb">date</span> <span class="s2">"+%Y-%m-%d %H:%M:%S"</span> <span class="p">;</span> <span class="nb">sleep </span>1<span class="p">;</span> <span class="k">done
+
+</span>ssh ec2-user@<span class="nv">$N3</span>
+<span class="k">while </span><span class="nb">true</span><span class="p">;</span> <span class="k">do </span>ip <span class="nt">-br</span> <span class="nt">-c</span> addr show <span class="o">&amp;&amp;</span> <span class="nb">echo</span> <span class="s2">"--------------"</span> <span class="p">;</span> <span class="nb">date</span> <span class="s2">"+%Y-%m-%d %H:%M:%S"</span> <span class="p">;</span> <span class="nb">sleep </span>1<span class="p">;</span> <span class="k">done</span>
+</code></pre></div></div> <figure> <picture> <img src="/assets/img/eks/04-networking-lab-2/lab-terminals.png" class="img-fluid rounded z-depth-1" width="auto" height="auto" data-zoomable="" onerror="this.onerror=null; $('.responsive-img-srcset').remove();"> </picture> </figure> <p>Open another terminal and watch pods:</p> <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>watch <span class="nt">-d</span> <span class="s1">'kubectl get pods -o wide'</span>
+</code></pre></div></div> <p>Open another terminal and deploy pods:</p> <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">cat</span> <span class="o">&lt;&lt;</span><span class="no">EOF</span><span class="sh"> | kubectl apply -f -
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx-deployment
+  labels:
+    app: nginx
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: nginx
+  template:
+    metadata:
+      labels:
+        app: nginx
+    spec:
+      containers:
+      - name: nginx
+        image: nginx:alpine
+        ports:
+        - containerPort: 80
+</span><span class="no">EOF
+</span></code></pre></div></div> <p>Confirm those pods are deployed:</p> <figure> <picture> <img src="/assets/img/eks/04-networking-lab-2/nginx-deployed.png" class="img-fluid rounded z-depth-1" width="auto" height="auto" data-zoomable="" onerror="this.onerror=null; $('.responsive-img-srcset').remove();"> </picture> </figure> <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Every 2.0s: kubectl get pods <span class="nt">-o</span> wide                                                                                                     MacBookPro: Sat Mar 28 12:40:12 2026
+                                                                                                                                                                <span class="k">in </span>2.301s <span class="o">(</span>0<span class="o">)</span>
+NAME                               READY   STATUS    RESTARTS   AGE     IP               NODE                            NOMINATED NODE   READINESS GATES
+netshoot-pod-64fbf7fb5-56nnb       1/1     Running   0          35h     192.168.0.106    ip-192-168-1-220.ec2.internal   &lt;none&gt;           &lt;none&gt;
+netshoot-pod-64fbf7fb5-bqrdj       1/1     Running   0          35h     192.168.7.161    ip-192-168-5-239.ec2.internal   &lt;none&gt;           &lt;none&gt;
+netshoot-pod-64fbf7fb5-nhdrk       1/1     Running   0          35h     192.168.8.207    ip-192-168-11-43.ec2.internal   &lt;none&gt;           &lt;none&gt;
+nginx-deployment-54fc99c8d-7psbm   1/1     Running   0          3m34s   192.168.5.5      ip-192-168-5-239.ec2.internal   &lt;none&gt;           &lt;none&gt;
+nginx-deployment-54fc99c8d-nnq8c   1/1     Running   0          3m34s   192.168.10.224   ip-192-168-11-43.ec2.internal   &lt;none&gt;           &lt;none&gt;
+nginx-deployment-54fc99c8d-vnp77   1/1     Running   0          3m34s   192.168.1.157    ip-192-168-1-220.ec2.internal   &lt;none&gt;           &lt;none&gt;
+</code></pre></div></div> <p>Now let’s add more pods:</p> <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>kubectl scale deployment nginx-deployment <span class="nt">--replicas</span><span class="o">=</span>8
+</code></pre></div></div> <figure> <picture> <img src="/assets/img/eks/04-networking-lab-2/nginx-8.png" class="img-fluid rounded z-depth-1" width="auto" height="auto" data-zoomable="" onerror="this.onerror=null; $('.responsive-img-srcset').remove();"> </picture> </figure> <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>kubectl scale deployment nginx-deployment <span class="nt">--replicas</span><span class="o">=</span>15
+</code></pre></div></div> <figure> <picture> <img src="/assets/img/eks/04-networking-lab-2/nginx-15.png" class="img-fluid rounded z-depth-1" width="auto" height="auto" data-zoomable="" onerror="this.onerror=null; $('.responsive-img-srcset').remove();"> </picture> </figure> <p>The third ENI(<code class="language-plaintext highlighter-rouge">ens7</code>) and <code class="language-plaintext highlighter-rouge">veth</code> are also created:</p> <figure> <picture> <img src="/assets/img/eks/04-networking-lab-2/veth-added.png" class="img-fluid rounded z-depth-1" width="auto" height="auto" data-zoomable="" onerror="this.onerror=null; $('.responsive-img-srcset').remove();"> </picture> </figure> <p>Let’s keep scaling up to 30:</p> <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>kubectl scale deployment nginx-deployment <span class="nt">--replicas</span><span class="o">=</span>30
+</code></pre></div></div> <figure> <picture> <img src="/assets/img/eks/04-networking-lab-2/nginx-30.png" class="img-fluid rounded z-depth-1" width="auto" height="auto" data-zoomable="" onerror="this.onerror=null; $('.responsive-img-srcset').remove();"> </picture> </figure> <p>Some pods can’t be allocated due to IP address exhaustion:</p> <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>kubectl scale deployment nginx-deployment <span class="nt">--replicas</span><span class="o">=</span>50
+</code></pre></div></div> <figure> <picture> <img src="/assets/img/eks/04-networking-lab-2/nginx-50.png" class="img-fluid rounded z-depth-1" width="auto" height="auto" data-zoomable="" onerror="this.onerror=null; $('.responsive-img-srcset').remove();"> </picture> </figure> <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>kubectl get pods | <span class="nb">grep </span>Pending
+nginx-deployment-54fc99c8d-5k2gp   0/1     Pending   0          2m20s
+nginx-deployment-54fc99c8d-5n7qm   0/1     Pending   0          2m21s
+nginx-deployment-54fc99c8d-5tmx6   0/1     Pending   0          2m21s
+nginx-deployment-54fc99c8d-bpvll   0/1     Pending   0          2m21s
+nginx-deployment-54fc99c8d-cngvc   0/1     Pending   0          2m20s
+nginx-deployment-54fc99c8d-cpqqk   0/1     Pending   0          2m21s
+nginx-deployment-54fc99c8d-csqbl   0/1     Pending   0          2m20s
+nginx-deployment-54fc99c8d-jr7v4   0/1     Pending   0          2m21s
+nginx-deployment-54fc99c8d-lwhtl   0/1     Pending   0          2m20s
+nginx-deployment-54fc99c8d-rh9rw   0/1     Pending   0          2m21s
+nginx-deployment-54fc99c8d-rpnpt   0/1     Pending   0          2m20s
+</code></pre></div></div> <p>Check event logs:</p> <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>kubectl events
+...
+3m31s                  Warning   FailedScheduling    Pod/nginx-deployment-54fc99c8d-5n7qm    0/3 nodes are available: 3 Too many pods. no new claims to deallocate, preemption: 0/3 nodes are available: 3 No preemption victims found <span class="k">for </span>incoming pod.
+...
+</code></pre></div></div> <p>Check cni logs:</p> <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">for </span>i <span class="k">in</span> <span class="nv">$N1</span> <span class="nv">$N2</span> <span class="nv">$N3</span><span class="p">;</span> <span class="k">do </span><span class="nb">echo</span> <span class="s2">"&gt;&gt; node </span><span class="nv">$i</span><span class="s2"> &lt;&lt;"</span><span class="p">;</span> ssh ec2-user@<span class="nv">$i</span> tree /var/log/aws-routed-eni<span class="p">;</span> <span class="nb">echo</span><span class="p">;</span> <span class="k">done
+for </span>i <span class="k">in</span> <span class="nv">$N1</span> <span class="nv">$N2</span> <span class="nv">$N3</span><span class="p">;</span> <span class="k">do </span><span class="nb">echo</span> <span class="s2">"&gt;&gt; node </span><span class="nv">$i</span><span class="s2"> &lt;&lt;"</span><span class="p">;</span> ssh ec2-user@<span class="nv">$i</span> <span class="nb">sudo cat</span> /var/log/aws-routed-eni/plugin.log | jq <span class="p">;</span> <span class="nb">echo</span><span class="p">;</span> <span class="k">done
+for </span>i <span class="k">in</span> <span class="nv">$N1</span> <span class="nv">$N2</span> <span class="nv">$N3</span><span class="p">;</span> <span class="k">do </span><span class="nb">echo</span> <span class="s2">"&gt;&gt; node </span><span class="nv">$i</span><span class="s2"> &lt;&lt;"</span><span class="p">;</span> ssh ec2-user@<span class="nv">$i</span> <span class="nb">sudo cat</span> /var/log/aws-routed-eni/ipamd.log | jq <span class="p">;</span> <span class="nb">echo</span><span class="p">;</span> <span class="k">done</span>
+...
+<span class="o">{</span>
+  <span class="s2">"level"</span>: <span class="s2">"debug"</span>,
+  <span class="s2">"ts"</span>: <span class="s2">"2026-03-27T10:44:12.451Z"</span>,
+  <span class="s2">"caller"</span>: <span class="s2">"ipamd/ipamd.go:1624"</span>,
+  <span class="s2">"msg"</span>: <span class="s2">"Found prefix pool count 0 for eni eni-0f2231da7b2f29b4b</span><span class="se">\n</span><span class="s2">"</span>
+<span class="o">}</span>
+...
+</code></pre></div></div> <p>IpamD debugging commands: https://github.com/aws/amazon-vpc-cni-k8s/blob/master/docs/troubleshooting.md</p> <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">for </span>i <span class="k">in</span> <span class="nv">$N1</span> <span class="nv">$N2</span> <span class="nv">$N3</span><span class="p">;</span> <span class="k">do </span><span class="nb">echo</span> <span class="s2">"&gt;&gt; node </span><span class="nv">$i</span><span class="s2"> &lt;&lt;"</span><span class="p">;</span> ssh ec2-user@<span class="nv">$i</span> curl <span class="nt">-s</span> http://localhost:61679/v1/enis | jq<span class="p">;</span> <span class="nb">echo</span><span class="p">;</span> <span class="k">done</span> | <span class="nb">grep</span> <span class="nt">-E</span> <span class="s1">'node|TotalIPs|AssignedIPs'</span>
+<span class="o">&gt;&gt;</span> node 98.92.230.99 <span class="o">&lt;&lt;</span>
+    <span class="sh">"</span><span class="no">TotalIPs</span><span class="sh">": 15,
+    "AssignedIPs": 15,
+&gt;&gt; node 34.228.20.240 &lt;&lt;
+    "TotalIPs": 15,
+    "AssignedIPs": 15,
+&gt;&gt; node 3.95.16.221 &lt;&lt;
+    "TotalIPs": 15,
+    "AssignedIPs": 15,
+</span></code></pre></div></div> <p>Delete <code class="language-plaintext highlighter-rouge">nginx</code> pods:</p> <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>kubectl delete deploy nginx-deployment
+</code></pre></div></div> <h3 id="24-lab---deploy-max-pods-managed-node-group-enforcement">2.4. Lab - Deploy max pods (managed node group enforcement)</h3> <p>This lab will implement *managed node group enforcement** described in <a href="https://docs.aws.amazon.com/eks/latest/userguide/choosing-instance-type.html#max-pods-precedence" rel="external nofollow noopener" target="_blank">How maxPods is determined</a> to increase the max pod count per node. Max pod count is constrained by the number of allocatable IP addresses per node, which is determined by <a href="/eks/02-networking/#233-cloud-native-aws-vpc-cni">the AWS VPC CNI mode</a>. The current VPC CNI mode is <strong>Secondary IP mode</strong>. To allocate more IPs(thus more pods), the mode should be switched to <strong>Prefix mode</strong>. To do so, your nodes <strong>must be AWS Nitro-based</strong>.</p> <p>Check the instance type:</p> <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>aws ec2 describe-instance-types <span class="nt">--instance-types</span> t3.medium <span class="nt">--query</span> <span class="s2">"InstanceTypes[].Hypervisor"</span>
+<span class="o">[</span>
+    <span class="s2">"nitro"</span>
+<span class="o">]</span>
+</code></pre></div></div> <p>Modify <code class="language-plaintext highlighter-rouge">eks.tf</code>:</p> <div class="language-tf highlighter-rouge"><div class="highlight"><pre class="highlight"><code>  <span class="nx">addons</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="nx">coredns</span> <span class="o">=</span> <span class="p">{</span>
+      <span class="nx">most_recent</span> <span class="o">=</span> <span class="kc">true</span>
+    <span class="p">}</span>
+    <span class="nx">kube-proxy</span> <span class="o">=</span> <span class="p">{</span>
+      <span class="nx">most_recent</span> <span class="o">=</span> <span class="kc">true</span>
+    <span class="p">}</span>
+    <span class="nx">vpc-cni</span> <span class="o">=</span> <span class="p">{</span>
+      <span class="nx">most_recent</span> <span class="o">=</span> <span class="kc">true</span>
+      <span class="nx">before_compute</span> <span class="o">=</span> <span class="kc">true</span>
+      <span class="nx">configuration_values</span> <span class="o">=</span> <span class="nx">jsonencode</span><span class="p">({</span>
+        <span class="nx">env</span> <span class="o">=</span> <span class="p">{</span>
+          <span class="c1"># WARM_ENI_TARGET = "1" # 현재 ENI 외에 여유 ENI 1개를 항상 확보</span>
+          <span class="c1"># WARM_IP_TARGET  = "5" # 현재 사용 중인 IP 외에 여유 IP 5개를 항상 유지, 설정 시 WARM_ENI_TARGET 무시됨</span>
+          <span class="c1"># MINIMUM_IP_TARGET   = "10" # 노드 시작 시 최소 확보해야 할 IP 총량 10개</span>
+          <span class="nx">ENABLE_PREFIX_DELEGATION</span> <span class="o">=</span> <span class="s2">"true"</span> 
+          <span class="c1">#WARM_PREFIX_TARGET = "1" # PREFIX_DELEGATION 사용 시, 1개의 여유 대역(/28) 유지</span>
+        <span class="p">}</span>
+      <span class="p">})</span>
+    <span class="p">}</span>
+  <span class="p">}</span>
+</code></pre></div></div> <p>Apply the modified terraform:</p> <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># monitoring</span>
+watch <span class="nt">-d</span> kubectl get pod <span class="nt">-n</span> kube-system <span class="nt">-l</span> k8s-app<span class="o">=</span>aws-node
+watch <span class="nt">-d</span> eksctl get addon <span class="nt">--cluster</span> myeks
+
+<span class="c"># apply</span>
+terraform plan
+terraform apply <span class="nt">-auto-approve</span>
+
+<span class="c"># restart kube-system to apply the change</span>
+kubectl rollout restart <span class="nt">-n</span> kube-system deployment coredns
+kubectl rollout restart <span class="nt">-n</span> kube-system deployment kube-ops-view
+</code></pre></div></div> <p>Confirm the changes:</p> <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># env in aws-node DaemonSet</span>
+kubectl get ds aws-node <span class="nt">-n</span> kube-system <span class="nt">-o</span> json | jq <span class="s1">'.spec.template.spec.containers[0].env'</span>
+...
+  <span class="o">{</span>
+    <span class="s2">"name"</span>: <span class="s2">"ENABLE_PREFIX_DELEGATION"</span>,
+    <span class="s2">"value"</span>: <span class="s2">"true"</span>
+  <span class="o">}</span>,
+ ...
+
+<span class="c"># IPv4 prefix</span>
+aws ec2 describe-instances <span class="nt">--filters</span> <span class="s2">"Name=tag-key,Values=eks:cluster-name"</span> <span class="s2">"Name=tag-value,Values=myeks"</span> <span class="se">\</span>
+  <span class="nt">--query</span> <span class="s1">'Reservations[*].Instances[].{InstanceId: InstanceId, Prefixes: NetworkInterfaces[].Ipv4Prefixes[]}'</span> | jq
+...
+  <span class="o">{</span>
+    <span class="s2">"InstanceId"</span>: <span class="s2">"i-04c28c1f88502edfe"</span>,
+    <span class="s2">"Prefixes"</span>: <span class="o">[</span>
+      <span class="o">{</span>
+        <span class="s2">"Ipv4Prefix"</span>: <span class="s2">"192.168.1.224/28"</span>
+      <span class="o">}</span>,
+      <span class="o">{</span>
+        <span class="s2">"Ipv4Prefix"</span>: <span class="s2">"192.168.2.64/28"</span>
+      <span class="o">}</span>
+    <span class="o">]</span>
+  <span class="o">}</span>,
+...
+</code></pre></div></div> <p>Confirm the change in console: EC2 &gt; Network Interfaces</p> <figure> <picture> <img src="/assets/img/eks/04-networking-lab-2/prefix.png" class="img-fluid rounded z-depth-1" width="auto" height="auto" data-zoomable="" onerror="this.onerror=null; $('.responsive-img-srcset').remove();"> </picture> </figure> <p>Monitor nodes:</p> <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>ssh ec2-user@<span class="nv">$N1</span>
+<span class="k">while </span><span class="nb">true</span><span class="p">;</span> <span class="k">do </span>ip <span class="nt">-br</span> <span class="nt">-c</span> addr show <span class="o">&amp;&amp;</span> <span class="nb">echo</span> <span class="s2">"--------------"</span> <span class="p">;</span> <span class="nb">date</span> <span class="s2">"+%Y-%m-%d %H:%M:%S"</span> <span class="p">;</span> <span class="nb">sleep </span>1<span class="p">;</span> <span class="k">done
+
+</span>ssh ec2-user@<span class="nv">$N2</span>
+<span class="k">while </span><span class="nb">true</span><span class="p">;</span> <span class="k">do </span>ip <span class="nt">-br</span> <span class="nt">-c</span> addr show <span class="o">&amp;&amp;</span> <span class="nb">echo</span> <span class="s2">"--------------"</span> <span class="p">;</span> <span class="nb">date</span> <span class="s2">"+%Y-%m-%d %H:%M:%S"</span> <span class="p">;</span> <span class="nb">sleep </span>1<span class="p">;</span> <span class="k">done
+
+</span>watch <span class="nt">-d</span> <span class="s1">'kubectl get pods -o wide'</span>
+</code></pre></div></div> <p>Deploy pods:</p> <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">cat</span> <span class="o">&lt;&lt;</span><span class="no">EOF</span><span class="sh"> | kubectl apply -f -
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx-deployment
+  labels:
+    app: nginx
+spec:
+  replicas: 15
+  selector:
+    matchLabels:
+      app: nginx
+  template:
+    metadata:
+      labels:
+        app: nginx
+    spec:
+      containers:
+      - name: nginx
+        image: nginx:alpine
+        ports:
+        - containerPort: 80
+</span><span class="no">EOF
+</span></code></pre></div></div> <p>Confirm the number of pods has been increased:</p> <figure> <picture> <img src="/assets/img/eks/04-networking-lab-2/prefix-nginx-15.png" class="img-fluid rounded z-depth-1" width="auto" height="auto" data-zoomable="" onerror="this.onerror=null; $('.responsive-img-srcset').remove();"> </picture> </figure> <p>Increase the number of pods to 30:</p> <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>kubectl scale deployment nginx-deployment <span class="nt">--replicas</span><span class="o">=</span>30
+</code></pre></div></div> <figure> <picture> <img src="/assets/img/eks/04-networking-lab-2/prefix-nginx-30.png" class="img-fluid rounded z-depth-1" width="auto" height="auto" data-zoomable="" onerror="this.onerror=null; $('.responsive-img-srcset').remove();"> </picture> </figure> <p>Increase the number of pods to 50:</p> <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>kubectl scale deployment nginx-deployment <span class="nt">--replicas</span><span class="o">=</span>50
+</code></pre></div></div> <p>Pending pods are found unexpectedly:</p> <figure> <picture> <img src="/assets/img/eks/04-networking-lab-2/prefix-nginx-50.png" class="img-fluid rounded z-depth-1" width="auto" height="auto" data-zoomable="" onerror="this.onerror=null; $('.responsive-img-srcset').remove();"> </picture> </figure> <p><code class="language-plaintext highlighter-rouge">ipamd</code> logs indicates more IPs can be allocated, confirming it is not the IP exhasution problem.</p> <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">for </span>i <span class="k">in</span> <span class="nv">$N1</span> <span class="nv">$N2</span> <span class="nv">$N3</span><span class="p">;</span> <span class="k">do </span><span class="nb">echo</span> <span class="s2">"&gt;&gt; node </span><span class="nv">$i</span><span class="s2"> &lt;&lt;"</span><span class="p">;</span> ssh ec2-user@<span class="nv">$i</span> curl <span class="nt">-s</span> http://localhost:61679/v1/enis | jq<span class="p">;</span> <span class="nb">echo</span><span class="p">;</span> <span class="k">done</span> | <span class="nb">grep</span> <span class="nt">-E</span> <span class="s1">'node|TotalIPs|AssignedIPs'</span>
+<span class="o">&gt;&gt;</span> node 98.92.230.99 <span class="o">&lt;&lt;</span>
+    <span class="sh">"</span><span class="no">TotalIPs</span><span class="sh">": 33,
+    "AssignedIPs": 15,
+&gt;&gt; node 34.228.20.240 &lt;&lt;
+    "TotalIPs": 34,
+    "AssignedIPs": 15,
+&gt;&gt; node 3.95.16.221 &lt;&lt;
+    "TotalIPs": 34,
+    "AssignedIPs": 15,
+</span></code></pre></div></div> <p>The max pod count is constrained by the <code class="language-plaintext highlighter-rouge">maxPods</code> variable set in <code class="language-plaintext highlighter-rouge">kubelet</code>:</p> <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">while </span><span class="nb">true</span><span class="p">;</span> <span class="k">do </span>kubectl describe node <span class="nt">-l</span> <span class="nv">tier</span><span class="o">=</span>primary | <span class="nb">grep </span>pods | <span class="nb">uniq</span> <span class="p">;</span> <span class="nb">sleep </span>1<span class="p">;</span> <span class="k">done
+  </span>pods:               17
+  pods:               17
+...
+</code></pre></div></div> <p>We are going to change <code class="language-plaintext highlighter-rouge">maxPods</code> variable. Set up monitoring again on each terminal:</p> <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">while </span><span class="nb">true</span><span class="p">;</span> <span class="k">do </span>kubectl describe node <span class="nt">-l</span> <span class="nv">tier</span><span class="o">=</span>primary | <span class="nb">grep </span>pods | <span class="nb">uniq</span> <span class="p">;</span> <span class="nb">sleep </span>1<span class="p">;</span> <span class="k">done
+while </span><span class="nb">true</span><span class="p">;</span> <span class="k">do </span>kubectl get pod | <span class="nb">grep </span>Pending | <span class="nb">wc</span> <span class="nt">-l</span> <span class="p">;</span> <span class="nb">sleep </span>1<span class="p">;</span> <span class="k">done</span>
+</code></pre></div></div> <figure> <picture> <img src="/assets/img/eks/04-networking-lab-2/prefix-monitoring.png" class="img-fluid rounded z-depth-1" width="auto" height="auto" data-zoomable="" onerror="this.onerror=null; $('.responsive-img-srcset').remove();"> </picture> </figure> <p>ssh to each worker node and modify <code class="language-plaintext highlighter-rouge">maxPods</code> temporarily:</p> <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">cat</span> /etc/kubernetes/kubelet/config.json | <span class="nb">grep </span>maxPods
+    <span class="s2">"maxPods"</span>: 17,
+
+<span class="nb">cat</span> /etc/kubernetes/kubelet/config.json.d/40-nodeadm.conf | <span class="nb">grep </span>maxPods
+    <span class="s2">"maxPods"</span>: 17
+</code></pre></div></div> <p>Change <code class="language-plaintext highlighter-rouge">maxPods</code> to 50 using <code class="language-plaintext highlighter-rouge">sed</code> in the first node and restart the node to apply:</p> <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">sudo sed</span> <span class="nt">-i</span> <span class="s1">'s/"maxPods": 17/"maxPods": 50/g'</span> /etc/kubernetes/kubelet/config.json
+<span class="nb">sudo sed</span> <span class="nt">-i</span> <span class="s1">'s/"maxPods": 17/"maxPods": 50/g'</span> /etc/kubernetes/kubelet/config.json.d/40-nodeadm.conf 
+
+<span class="c"># apply</span>
+<span class="nb">sudo </span>systemctl restart kubelet
+</code></pre></div></div> <p>Confirm the pending pods are all scheduled at the node with <code class="language-plaintext highlighter-rouge">maxPods</code> of 50:</p> <figure> <picture> <img src="/assets/img/eks/04-networking-lab-2/prefix-maxpods-50.png" class="img-fluid rounded z-depth-1" width="auto" height="auto" data-zoomable="" onerror="this.onerror=null; $('.responsive-img-srcset').remove();"> </picture> </figure> <figure> <picture> <img src="/assets/img/eks/04-networking-lab-2/prefix-maxpods-50-kube-ops-view.png" class="img-fluid rounded z-depth-1" width="auto" height="auto" data-zoomable="" onerror="this.onerror=null; $('.responsive-img-srcset').remove();"> </picture> </figure> <p>Delete <code class="language-plaintext highlighter-rouge">nginx</code> pods:</p> <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>kubectl delete deploy nginx-deployment
+</code></pre></div></div> <p>Please refer to <a href="https://kkamji.net/posts/eks-max-pod-limit/" rel="external nofollow noopener" target="_blank">EKS Max-Pods Limit과 Prefix Mode PoC</a> to modify the default <code class="language-plaintext highlighter-rouge">maxPods</code> variable in the provisioning time.</p> </d-article> <d-appendix> <d-footnote-list></d-footnote-list> <d-citation-list></d-citation-list> </d-appendix> <d-bibliography src="/assets/bibliography/"></d-bibliography><div id="giscus_thread" style="max-width: 800px; margin: 0 auto;"> <script>let giscusTheme=localStorage.getItem("theme"),giscusAttributes={src:"https://giscus.app/client.js","data-repo":"alshedivat/al-folio","data-repo-id":"MDEwOlJlcG9zaXRvcnk2MDAyNDM2NQ==","data-category":"Comments","data-category-id":"DIC_kwDOA5PmLc4CTBt6","data-mapping":"title","data-strict":"1","data-reactions-enabled":"1","data-emit-metadata":"0","data-input-position":"bottom","data-theme":giscusTheme,"data-lang":"en",crossorigin:"anonymous",async:""},giscusScript=document.createElement("script");Object.entries(giscusAttributes).forEach(([t,a])=>giscusScript.setAttribute(t,a)),document.getElementById("giscus_thread").appendChild(giscusScript);</script> <noscript>Please enable JavaScript to view the <a href="http://giscus.app/?ref_noscript" rel="external nofollow noopener" target="_blank">comments powered by giscus.</a> </noscript> </div> </div> <footer class="fixed-bottom"> <div class="container mt-0"> © Copyright 2026 Seyoung Nam. Powered by <a href="https://jekyllrb.com/" target="_blank" rel="external nofollow noopener">Jekyll</a> with <a href="https://github.com/alshedivat/al-folio" rel="external nofollow noopener" target="_blank">al-folio</a> theme. Hosted by <a href="https://pages.github.com/" target="_blank" rel="external nofollow noopener">GitHub Pages</a>. Photos from <a href="https://unsplash.com" target="_blank" rel="external nofollow noopener">Unsplash</a>. </div> </footer> <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.1/dist/js/bootstrap.bundle.min.js" integrity="sha256-fgLAgv7fyCGopR/gBNq2iW3ZKIdqIcyshnUULC4vex8=" crossorigin="anonymous"></script> <script src="https://cdn.jsdelivr.net/npm/mdbootstrap@4.20.0/js/mdb.min.js" integrity="sha256-NdbiivsvWt7VYCt6hYNT3h/th9vSTL4EDWeGs5SN3DA=" crossorigin="anonymous"></script> <script defer type="text/javascript" src="https://cdn.jsdelivr.net/npm/mermaid@10.9.1/dist/mermaid.min.js"></script> <script>document.addEventListener("DOMContentLoaded",function(){document.querySelectorAll("pre code.language-mermaid").forEach(function(e){let t=e.parentElement,n=document.createElement("div");n.classList.add("mermaid"),n.textContent=e.textContent,t.parentElement.replaceChild(n,t)}),mermaid.initialize({startOnLoad:!0,theme:"dark"===document.documentElement.getAttribute("data-theme")?"dark":"default"})});</script> <script defer src="https://cdn.jsdelivr.net/npm/medium-zoom@1.0.6/dist/medium-zoom.min.js" integrity="sha256-EdPgYcPk/IIrw7FYeuJQexva49pVRZNmt3LculEr7zM=" crossorigin="anonymous"></script> <script defer src="/assets/js/zoom.js"></script> <script defer src="/assets/js/common.js"></script> <script type="text/javascript">function progressBarSetup(){"max"in document.createElement("progress")?(initializeProgressElement(),$(document).on("scroll",function(){progressBar.attr({value:getCurrentScrollPosition()})}),$(window).on("resize",initializeProgressElement)):(resizeProgressBar(),$(document).on("scroll",resizeProgressBar),$(window).on("resize",resizeProgressBar))}function getCurrentScrollPosition(){return $(window).scrollTop()}function initializeProgressElement(){let e=$("#navbar").outerHeight(!0);$("body").css({"padding-top":e}),$("progress-container").css({"padding-top":e}),progressBar.css({top:e}),progressBar.attr({max:getDistanceToScroll(),value:getCurrentScrollPosition()})}function getDistanceToScroll(){return $(document).height()-$(window).height()}function resizeProgressBar(){progressBar.css({width:getWidthPercentage()+"%"})}function getWidthPercentage(){return getCurrentScrollPosition()/getDistanceToScroll()*100}const progressBar=$("#progress");window.onload=function(){setTimeout(progressBarSetup,50)};</script> </body> </html>
