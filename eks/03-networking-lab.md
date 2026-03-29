@@ -1,6 +1,6 @@
 ---
 layout: distill
-title: 03 EKS Networking Lab 1
+title: '03 EKS Networking Lab: Routing and Interfaces'
 description: 'EKS Study note'
 giscus_comments: true
 date: 2026-03-26

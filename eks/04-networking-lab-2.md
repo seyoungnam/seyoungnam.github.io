@@ -1,6 +1,6 @@
 ---
 layout: distill
-title: 04 EKS Networking Lab 2
+title: '04 EKS Networking Lab: Scaling Pod IPs with VPC CNI'
 description: 'EKS Study note'
 giscus_comments: true
 date: 2026-03-26
@@ -60,7 +60,7 @@ terraform apply -auto-approve
 
 Confirm the changes in the console:
 EKS > addon > vpc-cni
-{% include figure.html path="assets/img/eks/04-networking-la-2/vpc-cni.png" class="img-fluid rounded z-depth-1" zoomable=true %}
+{% include figure.html path="assets/img/eks/04-networking-lab-2/vpc-cni.png" class="img-fluid rounded z-depth-1" zoomable=true %}
 
 Check `env` in `aws-node` DaemonSet:
 ```bash
@@ -177,7 +177,8 @@ aws ec2 describe-instance-types --filters Name=instance-type,Values=c5\*.\* \
 ... 
 ```
 
-### 2.3. Lab - Deploy max pods
+### 2.3. Lab - Deploy max pods (Default ENI-based)
+[How maxPods is determined](https://docs.aws.amazon.com/eks/latest/userguide/choosing-instance-type.html#max-pods-precedence) introduces the order of precedence for `maxPods`. In this lab, we are attempting to confirm **Default ENI-based calculation**.
 Open your terminal on each node and run `ip addr show` command:
 ```bash
 ssh ec2-user@$N1
@@ -325,3 +326,203 @@ Delete `nginx` pods:
 ```bash
 kubectl delete deploy nginx-deployment
 ```
+
+### 2.4. Lab - Deploy max pods (managed node group enforcement)
+This lab will implement *managed node group enforcement** described in [How maxPods is determined](https://docs.aws.amazon.com/eks/latest/userguide/choosing-instance-type.html#max-pods-precedence) to increase the max pod count per node. Max pod count is constrained by the number of allocatable IP addresses per node, which is determined by [the AWS VPC CNI mode](/eks/02-networking/#233-cloud-native-aws-vpc-cni). The current VPC CNI mode is **Secondary IP mode**. To allocate more IPs(thus more pods), the mode should be switched to **Prefix mode**. To do so, your nodes **must be AWS Nitro-based**.
+
+Check the instance type:
+```bash
+aws ec2 describe-instance-types --instance-types t3.medium --query "InstanceTypes[].Hypervisor"
+[
+    "nitro"
+]
+```
+
+Modify `eks.tf`:
+```tf
+  addons = {
+    coredns = {
+      most_recent = true
+    }
+    kube-proxy = {
+      most_recent = true
+    }
+    vpc-cni = {
+      most_recent = true
+      before_compute = true
+      configuration_values = jsonencode({
+        env = {
+          # WARM_ENI_TARGET = "1" # 현재 ENI 외에 여유 ENI 1개를 항상 확보
+          # WARM_IP_TARGET  = "5" # 현재 사용 중인 IP 외에 여유 IP 5개를 항상 유지, 설정 시 WARM_ENI_TARGET 무시됨
+          # MINIMUM_IP_TARGET   = "10" # 노드 시작 시 최소 확보해야 할 IP 총량 10개
+          ENABLE_PREFIX_DELEGATION = "true" 
+          #WARM_PREFIX_TARGET = "1" # PREFIX_DELEGATION 사용 시, 1개의 여유 대역(/28) 유지
+        }
+      })
+    }
+  }
+```
+
+Apply the modified terraform:
+```bash
+# monitoring
+watch -d kubectl get pod -n kube-system -l k8s-app=aws-node
+watch -d eksctl get addon --cluster myeks
+
+# apply
+terraform plan
+terraform apply -auto-approve
+
+# restart kube-system to apply the change
+kubectl rollout restart -n kube-system deployment coredns
+kubectl rollout restart -n kube-system deployment kube-ops-view
+```
+
+Confirm the changes:
+```bash
+# env in aws-node DaemonSet
+kubectl get ds aws-node -n kube-system -o json | jq '.spec.template.spec.containers[0].env'
+...
+  {
+    "name": "ENABLE_PREFIX_DELEGATION",
+    "value": "true"
+  },
+ ...
+
+# IPv4 prefix
+aws ec2 describe-instances --filters "Name=tag-key,Values=eks:cluster-name" "Name=tag-value,Values=myeks" \
+  --query 'Reservations[*].Instances[].{InstanceId: InstanceId, Prefixes: NetworkInterfaces[].Ipv4Prefixes[]}' | jq
+...
+  {
+    "InstanceId": "i-04c28c1f88502edfe",
+    "Prefixes": [
+      {
+        "Ipv4Prefix": "192.168.1.224/28"
+      },
+      {
+        "Ipv4Prefix": "192.168.2.64/28"
+      }
+    ]
+  },
+...
+```
+
+Confirm the change in console:
+EC2 > Network Interfaces
+{% include figure.html path="assets/img/eks/04-networking-lab-2/prefix.png" class="img-fluid rounded z-depth-1" zoomable=true %}
+
+Monitor nodes:
+```bash
+ssh ec2-user@$N1
+while true; do ip -br -c addr show && echo "--------------" ; date "+%Y-%m-%d %H:%M:%S" ; sleep 1; done
+
+ssh ec2-user@$N2
+while true; do ip -br -c addr show && echo "--------------" ; date "+%Y-%m-%d %H:%M:%S" ; sleep 1; done
+
+watch -d 'kubectl get pods -o wide'
+```
+
+Deploy pods:
+```bash
+cat <<EOF | kubectl apply -f -
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx-deployment
+  labels:
+    app: nginx
+spec:
+  replicas: 15
+  selector:
+    matchLabels:
+      app: nginx
+  template:
+    metadata:
+      labels:
+        app: nginx
+    spec:
+      containers:
+      - name: nginx
+        image: nginx:alpine
+        ports:
+        - containerPort: 80
+EOF
+```
+
+Confirm the number of pods has been increased:
+{% include figure.html path="assets/img/eks/04-networking-lab-2/prefix-nginx-15.png" class="img-fluid rounded z-depth-1" zoomable=true %}
+
+Increase the number of pods to 30:
+```bash
+kubectl scale deployment nginx-deployment --replicas=30
+```
+{% include figure.html path="assets/img/eks/04-networking-lab-2/prefix-nginx-30.png" class="img-fluid rounded z-depth-1" zoomable=true %}
+
+Increase the number of pods to 50:
+```bash
+kubectl scale deployment nginx-deployment --replicas=50
+```
+
+Pending pods are found unexpectedly:
+{% include figure.html path="assets/img/eks/04-networking-lab-2/prefix-nginx-50.png" class="img-fluid rounded z-depth-1" zoomable=true %}
+
+`ipamd` logs indicates more IPs can be allocated, confirming it is not the IP exhasution problem.
+```bash
+for i in $N1 $N2 $N3; do echo ">> node $i <<"; ssh ec2-user@$i curl -s http://localhost:61679/v1/enis | jq; echo; done | grep -E 'node|TotalIPs|AssignedIPs'
+>> node 98.92.230.99 <<
+    "TotalIPs": 33,
+    "AssignedIPs": 15,
+>> node 34.228.20.240 <<
+    "TotalIPs": 34,
+    "AssignedIPs": 15,
+>> node 3.95.16.221 <<
+    "TotalIPs": 34,
+    "AssignedIPs": 15,
+```
+
+The max pod count is constrained by the `maxPods` variable set in `kubelet`:
+```bash
+while true; do kubectl describe node -l tier=primary | grep pods | uniq ; sleep 1; done
+  pods:               17
+  pods:               17
+...
+```
+
+We are going to change `maxPods` variable. Set up monitoring again on each terminal:
+```bash
+while true; do kubectl describe node -l tier=primary | grep pods | uniq ; sleep 1; done
+while true; do kubectl get pod | grep Pending | wc -l ; sleep 1; done
+```
+{% include figure.html path="assets/img/eks/04-networking-lab-2/prefix-monitoring.png" class="img-fluid rounded z-depth-1" zoomable=true %}
+
+ssh to each worker node and modify `maxPods` temporarily:
+```bash
+cat /etc/kubernetes/kubelet/config.json | grep maxPods
+    "maxPods": 17,
+
+cat /etc/kubernetes/kubelet/config.json.d/40-nodeadm.conf | grep maxPods
+    "maxPods": 17
+```
+
+Change `maxPods` to 50 using `sed` in the first node and restart the node to apply:
+```bash
+sudo sed -i 's/"maxPods": 17/"maxPods": 50/g' /etc/kubernetes/kubelet/config.json
+sudo sed -i 's/"maxPods": 17/"maxPods": 50/g' /etc/kubernetes/kubelet/config.json.d/40-nodeadm.conf 
+
+# apply
+sudo systemctl restart kubelet
+```
+
+Confirm the pending pods are all scheduled at the node with `maxPods` of 50:
+{% include figure.html path="assets/img/eks/04-networking-lab-2/prefix-maxpods-50.png" class="img-fluid rounded z-depth-1" zoomable=true %}
+
+{% include figure.html path="assets/img/eks/04-networking-lab-2/prefix-maxpods-50-kube-ops-view.png" class="img-fluid rounded z-depth-1" zoomable=true %}
+
+Delete `nginx` pods:
+```bash
+kubectl delete deploy nginx-deployment
+```
+
+Please refer to [EKS Max-Pods Limit과 Prefix Mode PoC](https://kkamji.net/posts/eks-max-pod-limit/) to modify the default `maxPods` variable in the provisioning time.
+
+

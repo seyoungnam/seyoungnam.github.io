@@ -21,12 +21,17 @@ nav_order: 6
     </li>
     <li>
       <h3>
-        <a class="post-title" href="../eks/03-networking-lab">03 EKS Networking Lab 1</a>
+        <a class="post-title" href="../eks/03-networking-lab">03 EKS Networking Lab: Routing and Interfaces</a>
       </h3>
     </li>
     <li>
       <h3>
-        <a class="post-title" href="../eks/04-networking-lab-2">04 EKS Networking Lab 2</a>
+        <a class="post-title" href="../eks/04-networking-lab-2">04 EKS Networking Lab: Scaling Pod IPs with VPC CNI</a>
+      </h3>
+    </li>
+    <li>
+      <h3>
+        <a class="post-title" href="../eks/05-networking-lab-3">05 EKS Networking Lab: AWS Load Balancer Controller & NLB</a>
       </h3>
     </li>
   </ul>

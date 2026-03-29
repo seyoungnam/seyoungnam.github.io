@@ -29,6 +29,8 @@ toc:
         subsections:
           - name: 3.2.1. iptables (default)
           - name: 3.2.2. IPVS (IP Virtual Server)
+          - name: 3.2.3. nftables proxy
+          - name: 3.2.4. eBPF mode + eXpress Data Path(XDP)
       - name: 3.3. Service types
         subsections:
           - name: 3.3.1. ClusterIP
@@ -113,12 +115,12 @@ Introduced to solve the density problem, this mode allows AWS to assign **/28 IP
 - **Subnet Impact:** It can consume large chunks of subnet IP space quickly, so proper subnet sizing is critical.
 
 ## 3. Service Network
-We have learned so far is about pod-to-pod networking in a cluster, **with an important assumption - pods are persistent**. This assumption does not reflect the reality. Pods are in fact ephemeral, meaning it is often scraped and redeployed. Pods are chaning. So its IP address is. From the source host point of view, it is a nightmare to keep following ever-changing destination IP address. That is where `Service` comes into play. 
+What we have learned so far is about pod-to-pod networking in a cluster, **with an important assumption - pods are persistent**. This assumption does not reflect the reality. Pods are in fact ephemeral, meaning it is often scraped and redeployed. Pods are changing, So is its IP address. From the source host point of view, it is a nightmare to keep following ever-changing destination IP address. That is where `Service` comes into play. 
 
 ### 3.1. What does `Service` do?
 {% include figure.html path="assets/img/eks/service.jpeg" class="img-fluid rounded z-depth-1" %}
 
-`Service` provides a **stable (long lived) IP address** and **hostname** for a service. The source host now can make a request to the `Service` with the stable IP address and the Service forwards it to one of the backend pods. If a new pod is deployed behind the `Service`, `Service` learns its IP address and able to forward the receiving request to the backend pod.
+`Service` provides a **stable (long-lived) IP address** and **hostname** for a service. The source host now can make a request to the `Service` with the stable IP address and the `Service` forwards it to one of the backend pods. If a new pod is deployed behind the `Service`, `Service` learns its IP address and able to forward the receiving request to the backend pod.
 
 {% include figure.html path="assets/img/eks/lb.jpeg" class="img-fluid rounded z-depth-1" %}
 Another feature of `Service` is **load balancing**. Requests to `Service` are distributed across pods running behind. To illustrate, if the client pod make the same request to the service three times, the first request hits pod 1, the second request hits pod 2, and the third request hits pod 3 under the round-robin load balancing policy.
@@ -151,25 +153,127 @@ IPVS is Layer 4 load balancer working at `Netfilter`. It offers better performan
 
 Unlike `iptables` which uses a sequential list of rules ($O(N)$), IPVS uses a **Hash Table** ($O(1)$), ensuring consistent performance even as the number of services grows into the thousands.
 
+#### 3.2.3. nftables proxy
+In this mode, `kube-proxy` configures packet forwarding rules using the **nftables API** of the kernel **netfilter subsystem**. For each endpoint, it installs nftables rules which, by default, select a backend Pod at random. The `nftables API` is the successor to the `iptables API` and is designed to provide better performance and scalability than `iptables`. The `nftables` proxy mode is able to process changes to service endpoints faster and more efficiently than the `iptables` mode, and is also able to more efficiently process packets in the kernel (though this only becomes noticeable in clusters with tens of thousands of services). _This proxy mode is only available on Linux nodes, and requires kernel 5.13 or later._ Please read [iptables: The two variants and their relationship with nftables](https://developers.redhat.com/blog/2020/08/18/iptables-the-two-variants-and-their-relationship-with-nftables) for more details.
+
+#### 3.2.4. eBPF mode + XDP(eXpress Data Path)
+While the previous modes rely on the fixed logic of the `Netfilter` subsystem, **eBPF (extended Berkeley Packet Filter)** allows for running custom, high-performance programs directly within the Linux kernel in response to various events (like packet arrival). 
+
+- **eBPF-based Load Balancing:** Instead of using `iptables` or `IPVS` rules, specialized CNI plugins like **Cilium** use eBPF to implement service load balancing. It can bypass much of the standard Linux networking stack (like the `conntrack` table), significantly reducing latency and CPU overhead.
+- **XDP (eXpress Data Path):** XDP is a specific type of eBPF hook that runs at the **earliest possible point** in the network driver, before the packet is even allocated into a kernel buffer (`sk_buff`). By processing packets directly at the NIC driver level, XDP can perform load balancing, DDoS protection, or packet dropping at near-line speeds.
+
+{% include figure.html path="assets/img/eks/02-networking/ebpf.jpeg" class="img-fluid rounded z-depth-1" zoomable=true %}
+
+This combination represents the cutting edge of Kubernetes networking, providing the highest possible performance and observability, especially in massive-scale environments.
+
+
+
 ### 3.3. `Service` types
 
 #### 3.3.1. ClusterIP
 `ClusterIP` is the default type of the `Service` in the k8s cluster. It is accessible only within the same cluster. A client outside of the cluster cannot access to it.
+
+```mermaid
+flowchart TD
+    subgraph Cluster ["Kubernetes Cluster"]
+        Client[Client Pod]
+        CIP[Service ClusterIP]
+        subgraph Backends ["Backend Pods"]
+            P1[Pod 1]
+            P2[Pod 2]
+        end
+    end
+
+    Client -- "Internal Request" --> CIP
+    CIP -- "Load Balance" --> P1
+    CIP -- "Load Balance" --> P2
+```
 
 #### 3.3.2. NodePort
 `NodePort` exposes the Service on each Node's IP at a static port (the `NodePort`). You can contact the `NodePort` Service, from outside the cluster, by requesting `<NodeIP>:<NodePort>`. 
 - **Mechanism:** It builds upon `ClusterIP` by opening a specific port on all nodes.
 - **Limitation:** You are responsible for managing the node IP addresses and load balancing across them if a node goes down.
 
+```mermaid
+flowchart TD
+    External["External Client"]
+    
+    subgraph Cluster ["Kubernetes Cluster"]
+        subgraph Node1 ["Worker Node 1"]
+            NP1["NodePort (e.g. 30080)"]
+        end
+        subgraph Node2 ["Worker Node 2"]
+            NP2["NodePort (e.g. 30080)"]
+        end
+        
+        CIP[Service ClusterIP]
+        
+        subgraph Backends ["Backend Pods"]
+            P1[Pod 1]
+            P2[Pod 2]
+        end
+    end
+
+    External -- "NodeIP1:30080" --> NP1
+    External -- "NodeIP2:30080" --> NP2
+    NP1 --> CIP
+    NP2 --> CIP
+    CIP -- "DNAT" --> P1
+    CIP -- "DNAT" --> P2
+```
+
 #### 3.3.3. LoadBalancer
 `LoadBalancer` exposes the Service externally using a cloud provider's load balancer (e.g., AWS NLB/ALB). 
 - **Mechanism:** It automatically creates a `NodePort` and `ClusterIP` Service to which the external load balancer routes.
 - **EKS Integration:** In EKS, this typically triggers the creation of an AWS Network Load Balancer (NLB) or Classic Load Balancer (CLB) that directs traffic to the `NodePort` on your worker nodes.
+
+```mermaid
+flowchart TD
+    External["External Client"]
+    LB["Cloud Load Balancer (e.g. AWS NLB)"]
+    
+    subgraph Cluster ["Kubernetes Cluster"]
+        subgraph Nodes ["Worker Nodes"]
+            NP["NodePort"]
+        end
+        CIP["ClusterIP"]
+        subgraph Backends ["Backend Pods"]
+            P1["Pod 1"]
+            P2["Pod 2"]
+        end
+    end
+
+    External -- "Public DNS/IP" --> LB
+    LB -- "Health-checked Routing" --> NP
+    NP --> CIP
+    CIP --> P1
+    CIP --> P2
+```
 
 #### 3.3.4. ExternalName
 `ExternalName` maps a Service to a DNS name instead of a pod selector.
 - **Mechanism:** It returns a `CNAME` record with the value defined in the `externalName` field (e.g., `my.database.example.com`).
 - **Use Case:** Useful for allowing Pods to reference external services (like an RDS instance) using a local Kubernetes DNS name.
 
-## 4. Gateway Network
+```mermaid
+flowchart TD
+    subgraph Cluster ["Kubernetes Cluster"]
+        Pod["Client Pod"]
+        DNS["CoreDNS"]
+        ExtSvc["Service (ExternalName)"]
+    end
+    
+    RDS["External Service (e.g. AWS RDS)"]
+
+    Pod -- "1. Lookup 'my-db.svc.cluster.local'" --> DNS
+    DNS -- "2. Returns CNAME" --> ExtSvc
+    ExtSvc -- "3. Points to 'db.aws.com'" --> RDS
+    Pod -- "4. Connects directly to" --> RDS
+```
+
+## 4. Exposing Kubernetes Applications
+Now we have a clear picture of the request routing process between pods within a cluster. The next question popped up on my mind is how to expose applications running in the cluster to the outside world. 
+
+
+## 5. Gateway Network
 While `Service` handles connectivity and load balancing within the cluster, the **Gateway Network** (comprising the modern **Gateway API** and its predecessor, **Ingress**) defines how external traffic from the internet or a VPC enters the cluster. In EKS, this layer typically leverages the **AWS Load Balancer Controller** to provision and manage AWS Application Load Balancers (ALB) and Network Load Balancers (NLB), providing advanced routing, TLS termination, and security integration at the cluster edge.
